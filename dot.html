@@ -2,28 +2,53 @@
 <html>
 <head>
     <style>
-        /* PUT ALL YOUR CSS (STYLES) HERE */
-        body { background: #000; color: #fff; font-family: sans-serif; }
-        .safety-dashboard { display: none; padding: 20px; }
-        /* ... existing styles ... */
+        body { background: #0f172a; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .safety-dashboard { text-align: center; border: 2px solid #ffcc00; padding: 40px; border-radius: 20px; background: #1e293b; }
+        .number { font-size: 72px; font-weight: 900; color: #ffcc00; }
+        .label { color: #94a3b8; letter-spacing: 2px; }
     </style>
 </head>
 <body>
 
     <div class="safety-dashboard">
-        <h1 id="ticker-title">Loading...</h1>
-        <div id="days">0</div>
-        </div>
+        <h1 id="ticker-title">LOADING SAFETY DATA...</h1>
+        <div class="number" id="days">0</div>
+        <div class="label">DAYS SINCE LAST ACCIDENT</div>
+    </div>
 
     <script>
-        /* PUT ALL THE CODE FROM YOUR SCREENSHOT HERE */
-        const SHEET_ID = '19sNWZ7NxHaE8Zjlzs57vZAKA_XBHBebPKAd59vUyjzc';
-        const API_KEY = 'AIzaSyAGpCyqpw0isbwpVTSi2KfG3gpuGYu86F4';
-        const RANGE = "'Last Acc'!A1:B3";
+        // REPLACE THIS URL with your "Publish to Web" CSV link
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_...YOUR_ID.../pub?output=csv';
 
         async function initDashboard() {
-            // ... the rest of the code from the screenshot ...
+            try {
+                const response = await fetch(CSV_URL);
+                const data = await response.text();
+                
+                // This splits the CSV into rows and columns
+                const rows = data.split('\n').map(row => row.split(','));
+
+                // Based on your Sheet: A1 is Title, B2 is Date
+                const title = rows[0][0];
+                const accidentDateStr = rows[1][1]; 
+
+                document.getElementById('ticker-title').innerText = title;
+
+                const accidentTime = new Date(accidentDateStr).getTime();
+                
+                if (!isNaN(accidentTime)) {
+                    setInterval(() => {
+                        const now = new Date().getTime();
+                        const diff = Math.max(0, now - accidentTime);
+                        const d = Math.floor(diff / 86400000);
+                        document.getElementById('days').innerText = d;
+                    }, 1000);
+                }
+            } catch (e) {
+                document.getElementById('ticker-title').innerText = "CONNECTION ERROR";
+            }
         }
+
         initDashboard();
     </script>
 </body>
