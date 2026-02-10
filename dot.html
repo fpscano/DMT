@@ -2,103 +2,80 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Safety Ticker - Days Since Accident</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap" rel="stylesheet">
-
+    <title>Safety Ticker</title>
     <style>
-        :root {
-            --bg-dark: #0f172a;
-            --card-bg: #1e293b;
-            --caution-yellow: #ffcc00; 
-            --dmt-blue: #002D62;
-            --status-green: #10b981;
-        }
+        /* Keep your existing CSS here */
+        body { background-color: #020617; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        #error-msg { color: #ef4444; font-weight: bold; text-align: center; display: none; }
+        .safety-dashboard { display: none; } /* Hidden until data loads */
+    </style>
+</head>
+<body>
 
-        body {
-            background-color: transparent; /* Allows it to blend into Visme slides */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            font-family: 'Inter', sans-serif;
-        }
+<div id="error-msg"></div>
 
-        .safety-dashboard {
-            width: 100%;
-            max-width: 900px;
-            background: var(--bg-dark);
-            border-radius: 20px;
-            border: 1px solid #334155;
-            overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
+<div id="dashboard" class="safety-dashboard" style="display:block; width: 90%; max-width: 800px;">
+    <h1 id="ticker-title" style="text-align:center; color:#ffcc00;">Loading...</h1>
+    <div style="display: flex; justify-content: space-around; font-size: 2rem; text-align: center;">
+        <div><div id="days">0</div><small>DAYS</small></div>
+        <div><div id="hours">00</div><small>HOURS</small></div>
+        <div><div id="minutes">00</div><small>MINS</small></div>
+        <div><div id="seconds">00</div><small>SECS</small></div>
+    </div>
+</div>
 
-        .safety-header {
-            background: var(--caution-yellow);
-            padding: 20px 40px;
-            border-bottom: 6px solid var(--dmt-blue);
-        }
+<script>
+    const SHEET_ID = '19sNWZ7NxHaE8Zjlzs57vZAKA_XBHBebPKAd59vUyjzc';
+    const API_KEY = 'AIzaSyAGpCyqpw0isbwpVTSi2KfG3gpuGYu86F4';
+    const RANGE = "'Last Acc'!A1:B3"; 
 
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    async function initDashboard() {
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+        const errorDiv = document.getElementById('error-msg');
+        
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error.message);
+            }
 
-        #ticker-title {
-            color: #000;
-            font-size: 24px;
-            font-weight: 900;
-            letter-spacing: 1px;
-            margin: 0;
-            text-transform: uppercase;
-        }
+            const rows = data.values;
+            if (!rows || rows.length < 3) {
+                throw new Error("Data missing in cells A1, B2, or B3");
+            }
 
-        .status-badge {
-            background: rgba(0, 0, 0, 0.1);
-            color: #000;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            border: 1px solid rgba(0,0,0,0.1);
-        }
+            document.getElementById('ticker-title').innerText = rows[0][0];
+            const accidentDateStr = `${rows[1][1]} ${rows[2][1]}`;
+            const accidentTime = new Date(accidentDateStr).getTime();
+            
+            if (isNaN(accidentTime)) {
+                throw new Error("Date in Sheet is not formatted correctly (Use MM/DD/YYYY)");
+            }
 
-        .safety-body {
-            padding: 30px;
-        }
+            runTicker(accidentTime);
 
-        .timer-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
+        } catch (e) { 
+            console.error(e);
+            errorDiv.style.display = 'block';
+            errorDiv.innerText = "⚠️ " + e.message;
+            document.getElementById('ticker-title').innerText = "Dashboard Error";
         }
+    }
 
-        .time-card {
-            background: var(--card-bg);
-            padding: 25px 15px;
-            border-radius: 16px;
-            border: 1px solid #334155;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
+    function runTicker(timestamp) {
+        setInterval(() => {
+            const now = new Date().getTime();
+            const diff = Math.max(0, now - timestamp);
+            document.getElementById('days').innerText = Math.floor(diff / 86400000);
+            document.getElementById('hours').innerText = Math.floor((diff % 86400000) / 3600000).toString().padStart(2, '0');
+            document.getElementById('minutes').innerText = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+            document.getElementById('seconds').innerText = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+        }, 1000);
+    }
 
-        .time-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--caution-yellow);
-        }
-
-        .number {
-            font-size: 60px;
-            font-weight: 900;
-            color: white;
-            line-height: 1;
-            margin-bottom: 5px;
-            font-variant-numeric: tabular-nums;
-            text-shadow: 0 0 20px rgba(255, 204, 0, 0.2
+    initDashboard();
+</script>
+</body>
+</html>
