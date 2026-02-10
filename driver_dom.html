@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Driver Domicile Dashboard</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+  <style>
+    /* CSS Styles from CodePen */
+    :root {
+      --bg-dark: transparent; 
+      --bg-card: #1e293b;
+      --text-light: #f8fafc;
+      --accent-blue: #38bdf8;
+      --gold-intense: #facc15;
+    }
+
+    body { 
+      background-color: var(--bg-dark); 
+      color: var(--text-light); 
+      font-family: 'Inter', sans-serif; 
+      margin: 0; 
+    }
+
+    .dashboard-wrapper {
+      padding: 10px;
+    }
+
+    .dashboard-header {
+      text-align: center;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    .dashboard-header h2 {
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--accent-blue);
+      margin: 0;
+    }
+
+    .viz-row { 
+      display: flex; 
+      flex-direction: row; 
+      gap: 20px; 
+      align-items: flex-start;
+      flex-wrap: wrap; /* Allows wrapping on smaller screens */
+    }
+
+    .map-render-area { 
+      flex: 2; 
+      min-width: 300px;
+      height: 500px; 
+      background: transparent !important;
+    }
+
+    .text-render-area {
+      flex: 1.5;
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 20px;
+      height: 500px;
+      border: 1px solid #334155;
+      column-count: 3;
+      column-gap: 25px;
+      column-rule: 1px solid rgba(51, 65, 85, 0.5);
+      overflow-y: auto;
+    }
+
+    .stat-total { 
+      font-weight: 700; 
+      color: var(--accent-blue); 
+      border-bottom: 2px solid var(--accent-blue); 
+      margin-bottom: 15px; 
+      display: block;
+      font-size: 0.9rem;
+    }
+
+    .stat-line { 
+      display: flex; 
+      justify-content: space-between; 
+      padding: 6px 0; 
+      border-bottom: 1px solid rgba(51, 65, 85, 0.3); 
+      font-size: 0.85rem; 
+      break-inside: avoid; 
+    }
+
+    @keyframes gold-flash {
+      0%, 100% { background-color: transparent; }
+      50% { 
+        background-color: rgba(250, 204, 21, 0.8); 
+        color: #000; 
+        font-weight: bold;
+      }
+    }
+
+    .winner-flash { 
+      animation: gold-flash 1.5s infinite !important; 
+      border-radius: 4px; 
+      padding: 2px 5px; 
+    }
+
+    .map-winner-flash { 
+      fill: var(--gold-intense) !important; 
+      filter: drop-shadow(0 0 5px var(--gold-intense));
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-wrapper">
+    <div class="map-dashboard-container">
+      <div class="dashboard-header">
+        <h2>Driver Domicile by state</h2>
+      </div>
+      <div class="viz-row">
+        <div id="regions_div" class="map-render-area"></div>
+        <div id="text_list_div" class="text-render-area"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Configuration
+    const SHEET_ID = '19sNWZ7NxHaE8Zjlzs57vZAKA_XBHBebPKAd59vUyjzc';
+    const API_KEY = 'AIzaSyAGpCyqpw0isbwpVTSi2KfG3gpuGYu86F4';
+    const DOMICILE_RANGE = 'Driver Domicile!E2:E1000'; 
+
+    // Load Google Charts Library
+    google.charts.load('current', { 'packages': ['geochart'], 'mapsApiKey': API_KEY });
+    google.charts.setOnLoadCallback(fetchAndDraw);
+
+    function renderVisuals(data, winner, totalCount) {
+      // TEXT LIST RENDERING
+      const listDiv = document.getElementById('text_list_div');
+      let htmlContent = `<div class="stat-total">TOTAL: ${totalCount}</div>`;
+      const sortedData = data.slice(1).sort((a, b) => b[1] - a[1]);
+
+      sortedData.forEach(item => {
+        const stateId = item[0].replace('US-', '');
+        const isWinner = item[0] === winner;
+        const flashClass = isWinner ? 'winner-flash' : '';
+        htmlContent += `<div class="stat-line ${flashClass}"><span>${stateId}</span><span>${item[1]}</span></div>`;
+      });
+      listDiv.innerHTML = htmlContent;
+
+      // MAP RENDERING
+      const mapDataTable = google.visualization.arrayToDataTable(data);
+      const mapChart = new google.visualization.GeoChart(document.getElementById('regions_div'));
+      
+      google.visualization.events.addListener(mapChart, 'ready', function() {
+        const mapDiv = document.getElementById('regions_div');
+        const paths = mapDiv.getElementsByTagName('path');
+        const winnerName = winner.replace('US-', ''); 
+        for (let path of paths) {
+          if (path.getAttribute('aria-label') && path.getAttribute('aria-label').includes(winnerName)) {
+            path.classList.add('map-winner-flash');
+          }
+        }
+      });
+
+      mapChart.draw(mapDataTable, {
+        region: 'US', 
+        resolution: 'provinces',
+        colorAxis: { colors: ['#1e293b', '#38bdf8'] },
+        backgroundColor: 'transparent', 
+        datalessRegionColor: '#1e293b', 
+        legend: 'none'
+      });
+    }
+
+    async function fetchAndDraw() {
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${DOMICILE_RANGE}?key=${API_KEY}`;
+      try {
+        const response = await fetch(url);
+        const result = await response.json();
+        const rows = result.values;
+        if (!rows) return;
+        
+        const stateCounts = {};
+        let totalDrivers = 0;
+        
+        rows.forEach(row => { 
+          if (row[0]) { 
+            stateCounts[row[0]] = (stateCounts[row[0]] || 0) + 1; 
+            totalDrivers++; 
+          }
+        });
+
+        const dataArray = [['State', 'Drivers']];
+        let maxVal = 0, winnerId = "";
+        
+        for (const [st, count] of Object.entries(stateCounts)) {
+          const stateId = `US-${st}`;
+          dataArray.push([stateId, count]);
+          if (count > maxVal) { 
+            maxVal = count; 
+            winnerId = stateId; 
+          }
+        }
+        renderVisuals(dataArray, winnerId, totalDrivers);
+      } catch (e) { 
+        console.error("CONNECTION FAILED:", e.message); 
+      }
+    }
+  </script>
+</body>
+</html>
