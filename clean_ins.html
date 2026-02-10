@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clean Inspections Dashboard</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* CSS Styles from your CodePen */
+    :root {
+      --bg-dark: #0f172a;
+      --text-light: #f8fafc;
+    }
+
+    body { 
+      background-color: var(--bg-dark); 
+      font-family: 'Inter', sans-serif; 
+      padding: 20px; 
+      margin: 0;
+    }
+
+    .chart-container { 
+      background: var(--bg-dark); 
+      padding: 20px; 
+      border-radius: 8px; 
+    }
+
+    .chart-header h2 { 
+      color: var(--text-light); 
+      font-size: 1.1rem; 
+      margin-bottom: 20px; 
+    }
+
+    /* Dynamic Winner Title Flash */
+    .winner-label {
+      animation: gold-text-flash 2s ease-in-out infinite;
+      font-weight: bold;
+    }
+
+    @keyframes gold-text-flash {
+      0%, 100% { color: #94a3b8; }
+      50% { color: #facc15; text-shadow: 0 0 10px rgba(250, 204, 21, 0.5); }
+    }
+
+    /* Bar Basics */
+    .bar-wrapper { margin-bottom: 12px; }
+    .bar-label { color: #94a3b8; font-size: 0.8rem; margin-bottom: 4px; }
+    .bar-track { background: #1e293b; height: 20px; border-radius: 4px; overflow: hidden; }
+
+    /* Ribbon Effect Logic */
+    .bar-fill {
+      height: 100%;
+      display: flex; align-items: center; justify-content: flex-end;
+      padding-right: 10px; border-radius: 4px;
+      transition: width 2s cubic-bezier(0.1, 0.5, 0.1, 1);
+      background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 255, 255, 0.1) 10px, rgba(255, 255, 255, 0.2) 20px);
+      background-size: 40px 100%;
+      animation: ribbon-loop 2s linear infinite;
+    }
+
+    @keyframes ribbon-loop { 
+      from { background-position: 0 0; } 
+      to { background-position: 40px 0; } 
+    }
+
+    /* Winner Bar Glow */
+    .winner-bar { 
+      animation: ribbon-loop 2s linear infinite, gold-flash 2s ease-in-out infinite; 
+    }
+
+    @keyframes gold-flash { 
+      0%, 100% { filter: brightness(1); } 
+      50% { filter: brightness(1.3); box-shadow: 0 0 15px #facc15; } 
+    }
+
+    .bar-value { color: #000; font-weight: bold; font-size: 0.7rem; }
+  </style>
+</head>
+<body>
+
+  <div class="chart-container">
+    <div class="chart-header">
+      <h2 id="chart-title">Clean Inspections by Terminal</h2>
+    </div>
+    <div id="dynamic-bar-chart" class="bar-chart"></div>
+  </div>
+
+  <script>
+    /* JavaScript Logic */
+    const SHEET_ID = '19sNWZ7NxHaE8Zjlzs57vZAKA_XBHBebPKAd59vUyjzc';
+    const RANGE = 'Inspections!A1:B6'; 
+    const API_KEY = 'AIzaSyAGpCyqpw0isbwpVTSi2KfG3gpuGYu86F4';
+
+    const terminalColors = {
+      "Birmingham": "#facc15",
+      "Scottsboro": "#84cc16",
+      "Broken Bow": "#0ea5e9",
+      "Starke": "#ef4444",
+      "Camden": "#10b981"
+    };
+
+    async function fetchSheetData() {
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+      
+      try {
+        const response = await fetch(url);
+        const result = await response.json();
+        const rows = result.values;
+
+        if (!rows || rows.length <= 1) {
+          console.error('No data found in sheet.');
+          return;
+        }
+
+        const chartData = rows.slice(1).map(row => ({
+          terminal: row[0],
+          value: parseInt(row[1]) || 0
+        }));
+
+        renderChart(chartData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    }
+
+    function renderChart(data) {
+      const container = document.getElementById('dynamic-bar-chart');
+      container.innerHTML = ''; 
+      
+      const maxValue = Math.max(...data.map(d => d.value), 1);
+
+      data.forEach(item => {
+        const isWinner = item.value === maxValue && maxValue > 0;
+        const widthPercentage = (item.value / maxValue) * 100;
+        const color = terminalColors[item.terminal] || "#64748b";
+
+        const barHtml = `
+          <div class="bar-wrapper">
+            <div class="bar-label ${isWinner ? 'winner-label' : ''}">${item.terminal}</div>
+            <div class="bar-track">
+              <div class="bar-fill ${isWinner ? 'winner-bar' : ''}" 
+                   style="width: 0%; background-color: ${color};" 
+                   data-width="${widthPercentage}%">
+                <span class="bar-value">${item.value}</span>
+              </div>
+            </div>
+          </div>
+        `;
+        container.innerHTML += barHtml;
+      });
+
+      setTimeout(() => {
+        document.querySelectorAll('.bar-fill').forEach(bar => {
+          bar.style.width = bar.getAttribute('data-width');
+        });
+      }, 100);
+    }
+
+    fetchSheetData();
+  </script>
+</body>
+</html>
