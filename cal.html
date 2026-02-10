@@ -12,7 +12,7 @@
   <style>
     /* CSS Styles */
     body {
-      background-color: transparent; /* Changed to transparent for better Visme blending */
+      background-color: transparent; 
       display: flex;
       justify-content: center;
       padding: 10px;
@@ -58,10 +58,9 @@
       font-size: 1.2rem;
       margin-top: 5px;
       display: block;
-      color: #f1c40f; /* Gold for the date to pop */
+      color: #f1c40f; 
     }
 
-    /* Subtle pulse for the current week */
     #current-week {
       animation: pulse 2s infinite ease-in-out;
     }
@@ -110,3 +109,23 @@
       
       // 3. Full Date String
       const fullDateString = now.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+
+      // Update UI
+      document.getElementById('weeks-left').innerText = weeksLeft;
+      document.getElementById('current-week').innerText = currentWeek;
+      document.getElementById('full-date').innerText = fullDateString;
+    }
+
+    // Run immediately
+    updateDashboard();
+    
+    // Refresh every hour to keep date/weeks accurate
+    setInterval(updateDashboard, 3600000);
+  </script>
+
+</body>
+</html>
