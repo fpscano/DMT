@@ -1,59 +1,30 @@
-async function initDashboard() {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
-    
-    try {
-        const response = await fetch(url);
-        const data = await response.json();
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        /* PUT ALL YOUR CSS (STYLES) HERE */
+        body { background: #000; color: #fff; font-family: sans-serif; }
+        .safety-dashboard { display: none; padding: 20px; }
+        /* ... existing styles ... */
+    </style>
+</head>
+<body>
 
-        // Check if Google returned an error (like an expired API key)
-        if (data.error) {
-            console.error("Google API Error:", data.error.message);
-            document.getElementById('ticker-title').innerText = "API AUTH ERROR";
-            return;
+    <div class="safety-dashboard">
+        <h1 id="ticker-title">Loading...</h1>
+        <div id="days">0</div>
+        </div>
+
+    <script>
+        /* PUT ALL THE CODE FROM YOUR SCREENSHOT HERE */
+        const SHEET_ID = '19sNWZ7NxHaE8Zjlzs57vZAKA_XBHBebPKAd59vUyjzc';
+        const API_KEY = 'AIzaSyAGpCyqpw0isbwpVTSi2KfG3gpuGYu86F4';
+        const RANGE = "'Last Acc'!A1:B3";
+
+        async function initDashboard() {
+            // ... the rest of the code from the screenshot ...
         }
-
-        const rows = data.values;
-        if (rows && rows.length >= 3) {
-            document.getElementById('ticker-title').innerText = rows[0][0];
-            
-            // Forces the date to be interpreted as a clean string to prevent "NaN"
-            const dateStr = String(rows[1][1]).trim();
-            const timeStr = String(rows[2][1]).trim();
-            const accidentTime = new Date(`${dateStr} ${timeStr}`).getTime();
-            
-            if (!isNaN(accidentTime)) {
-                // Only show the dashboard once we have a valid number
-                document.querySelector('.safety-dashboard').style.display = 'block';
-                runTicker(accidentTime);
-            } else {
-                document.getElementById('ticker-title').innerText = "DATE FORMAT ERROR";
-            }
-        }
-    } catch (e) { 
-        console.error("Network Error:", e); 
-        document.getElementById('ticker-title').innerText = "OFFLINE";
-    }
-}
-
-function runTicker(accidentTimestamp) {
-    const updateUI = () => {
-        const now = new Date().getTime();
-        const diff = Math.max(0, now - accidentTimestamp);
-
-        // Standard time math for the cycles
-        const d = Math.floor(diff / 86400000);
-        const h = Math.floor((diff % 86400000) / 3600000);
-        const m = Math.floor((diff % 3600000) / 60000);
-        const s = Math.floor((diff % 60000) / 1000);
-
-        document.getElementById('days').innerText = d;
-        document.getElementById('hours').innerText = h.toString().padStart(2, '0');
-        document.getElementById('minutes').innerText = m.toString().padStart(2, '0');
-        document.getElementById('seconds').innerText = s.toString().padStart(2, '0');
-    };
-
-    updateUI();
-    setInterval(updateUI, 1000);
-}
-
-initDashboard();
+        initDashboard();
+    </script>
+</body>
+</html>
