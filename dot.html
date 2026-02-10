@@ -16,55 +16,43 @@
             color: white;
         }
         .container {
-            border: 2px solid #ffcc00;
+            border: 4px solid #ffcc00;
             padding: 40px;
-            border-radius: 12px;
+            border-radius: 20px;
             text-align: center;
             background: #1e293b;
+            box-shadow: 0 0 30px rgba(255, 204, 0, 0.2);
             width: 80%;
             max-width: 600px;
         }
-        .number { font-size: 80px; font-weight: 900; color: #ffcc00; margin: 0; }
+        .number { font-size: 80px; font-weight: 900; color: #ffcc00; margin: 10px 0; }
         .label { font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: #94a3b8; }
-        #ticker-title { font-size: 18px; margin-bottom: 10px; opacity: 0.8; }
+        #ticker-title { font-size: 22px; margin-bottom: 10px; color: #fff; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <div id="ticker-title">LOADING DATA...</div>
+        <div id="ticker-title">CONNECTING...</div>
         <p class="number" id="days">0</p>
-        <p class="label">Days Since Last Accident</p>
+        <p class="label">Days Since Last DOT Accident</p>
     </div>
 
     <script>
-        // Replace this with your actual published CSV link from Google Sheets
-        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_.../pub?output=csv';
+        // Use the actual published CSV link you provided
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSXwF-92T09SgCmFnFLk6NjAWwK52BxFpyivdtrFtFWv-c4DdrF1jgpgZg7jWsyASCqVP7TxyDKVuH4/pub?output=csv';
 
         async function initDashboard() {
             try {
                 const response = await fetch(CSV_URL);
                 const csvText = await response.text();
+                
+                // Parse CSV into rows and cells
                 const rows = csvText.split('\n').map(row => row.split(','));
 
-                // Update Title from Cell A1 and Date from B2
                 if (rows.length > 0) {
-                    document.getElementById('ticker-title').innerText = rows[0][0];
-                    const accidentDate = new Date(rows[1][1]).getTime();
-
-                    if (!isNaN(accidentDate)) {
-                        setInterval(() => {
-                            const now = new Date().getTime();
-                            const diff = Math.max(0, now - accidentDate);
-                            document.getElementById('days').innerText = Math.floor(diff / 86400000);
-                        }, 1000);
-                    }
-                }
-            } catch (e) {
-                document.getElementById('ticker-title').innerText = "CONNECTION ERROR";
-            }
-        }
-        initDashboard();
-    </script>
-</body>
-</html>
+                    // Title from A1
+                    document.getElementById('ticker-title').innerText = rows[0][0].replace(/"/g, '');
+                    
+                    // Date from B2
+                    const rawDate = rows[1][1].
