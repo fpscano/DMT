@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safety Ticker - Days Since Accident</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --caution-yellow: #ffcc00; 
+            --dmt-blue: #002D62;
+            --status-green: #10b981;
+        }
+
+        body {
+            background-color: transparent; /* Allows it to blend into Visme slides */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .safety-dashboard {
+            width: 100%;
+            max-width: 900px;
+            background: var(--bg-dark);
+            border-radius: 20px;
+            border: 1px solid #334155;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .safety-header {
+            background: var(--caution-yellow);
+            padding: 20px 40px;
+            border-bottom: 6px solid var(--dmt-blue);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #ticker-title {
+            color: #000;
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            margin: 0;
+            text-transform: uppercase;
+        }
+
+        .status-badge {
+            background: rgba(0, 0, 0, 0.1);
+            color: #000;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .safety-body {
+            padding: 30px;
+        }
+
+        .timer-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .time-card {
+            background: var(--card-bg);
+            padding: 25px 15px;
+            border-radius: 16px;
+            border: 1px solid #334155;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .time-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--caution-yellow);
+        }
+
+        .number {
+            font-size: 60px;
+            font-weight: 900;
+            color: white;
+            line-height: 1;
+            margin-bottom: 5px;
+            font-variant-numeric: tabular-nums;
+            text-shadow: 0 0 20px rgba(255, 204, 0, 0.2
