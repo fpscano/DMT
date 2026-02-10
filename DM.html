@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Safety Narrative</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .message-container {
+            background: #0f172a;
+            color: #f8fafc;
+            padding: 30px;
+            border-radius: 12px;
+            border: 2px solid #38bdf8;
+            text-align: center;
+            width: 550px;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .message-header {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: #38bdf8;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+            padding-bottom: 10px;
+        }
+
+        .message-body {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            font-weight: 400;
+            opacity: 0.95;
+        }
+
+        strong {
+            color: #fff;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="message-container">
+        <div class="message-header" id="narrative-title">Loading Narrative...</div>
+        <div class="message-body" id="narrative-text">Please wait while we load today's message.</div>
+    </div>
+
+    <script>
+        function rotateSafetyMessage() {
+            const messages = [
+                {
+                    title: "Culture & Trust Narrative",
+                    text: "Our safety culture is built on trust and follow-through. Driver Managers play a critical role by reminding drivers and contractors to certify logs daily and support our shared values at <strong>DMT and PS Logistics</strong>."
+                },
+                {
+                    title: "Safety First Narrative",
+                    text: "At <strong>DMT and PS Logistics</strong>, safety starts before the wheels turn. Please remind drivers and contractors to certify logs every day as part of our Safety First commitment."
+                },
+                {
+                    title: "Accountability Narrative",
+                    text: "Our core values depend on accountability at every level. Remind drivers and contractors to review and certify their logs daily. Ownership of logs is ownership of safety at <strong>DMT and PS Logistics</strong>."
+                },
+                {
+                    title: "Integrity & Compliance Narrative",
+                    text: "Integrity means doing the right thing even when no one is watching. Please reinforce daily log certification with drivers and contractors to maintain DOT compliance and <strong>DMT and PS Logistics</strong> standards."
+                },
+                {
+                    title: "Driver-Focused Protection Narrative",
+                    text: "Certified logs protect our drivers on the road and at roadside inspections. Please remind drivers and contractors daily that log certification is a key part of operating safely at <strong>DMT and PS Logistics</strong>."
+                },
+                {
+                    title: "Professional Standards Narrative",
+                    text: "Professional fleets operate with discipline and consistency. Remind drivers and contractors to certify their logs every day to uphold the professional standards of <strong>DMT and PS Logistics</strong>."
+                },
+                {
+                    title: "Operational Excellence Narrative",
+                    text: "Operational excellence is built on daily habits. Please ensure drivers and contractors are certifying logs every day to keep <strong>DMT and PS Logistics</strong> inspection-ready and running smoothly."
+                }
+            ];
+
+            // Logic: Pick message based on day of the week (0-6)
+            const dayIndex = new Date().getDay();
+            const todayMessage = messages[dayIndex];
+
+            // Update UI using innerHTML to allow <strong> tags to work
+            document.getElementById('narrative-title').innerHTML = todayMessage.title;
+            document.getElementById('narrative-text').innerHTML = todayMessage.text;
+        }
+
+        // Run on load
+        rotateSafetyMessage();
+    </script>
+</body>
+</html>
