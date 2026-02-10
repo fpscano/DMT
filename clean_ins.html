@@ -12,77 +12,159 @@
       justify-content: center; 
       align-items: center; 
       min-height: 100vh; 
-      font-family: 'Inter', sans-serif;
+      color: white;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
     #dynamic-bar-chart {
       width: 90%;
-      max-width: 1000px;
-      padding: 25px;
+      max-width: 800px;
+      padding: 30px;
       background: #1e293b;
-      border-radius: 12px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      border-radius: 15px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
     }
 
-    .bar-wrapper { margin-bottom: 20px; }
+    .bar-wrapper { margin-bottom: 25px; }
 
     .bar-label {
-      color: #94a3b8;
-      font-size: 0.9rem;
+      font-size: 1rem;
       font-weight: 600;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+      display: block;
       transition: all 0.3s ease;
     }
 
     .bar-track {
       background: #334155;
-      height: 28px;
-      border-radius: 6px;
+      height: 35px;
+      border-radius: 8px;
       width: 100%;
       overflow: hidden;
       position: relative;
     }
 
-    /* CONSTANT ANIMATION FOR ALL BARS */
+    /* CONSTANT SHIMMER ANIMATION FOR ALL BARS */
     .bar-fill {
       height: 100%;
-      border-radius: 6px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      padding-right: 12px;
-      transition: width 1.5s cubic-bezier(0.1, 0.5, 0.5, 1);
+      padding-right: 15px;
+      transition: width 2s cubic-bezier(0.1, 0.5, 0.5, 1);
       position: relative;
-      
-      /* Subtle background pulse for every bar */
-      animation: bar-pulse 3s infinite ease-in-out;
+      background-size: 200% 100%;
+      animation: shimmer 3s infinite linear;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
     }
 
     .bar-value {
-      color: white;
-      font-size: 0.8rem;
       font-weight: 800;
-      z-index: 2;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
-    /* WINNER STYLES: Constant Flash & Glow */
+    /* WINNER FLASHING EFFECTS */
     .winner-label {
       color: #facc15 !important;
-      animation: text-glow 1.5s infinite ease-in-out;
-      font-weight: 800;
-      transform: scale(1.02);
+      animation: text-pulse 1s infinite alternate;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
     .winner-bar {
-      box-shadow: 0 0 15px rgba(250, 204, 21, 0.5);
-      animation: winner-flash 1.5s infinite ease-in-out !important;
+      box-shadow: 0 0 20px #facc15;
+      animation: winner-glow 1s infinite alternate !important;
     }
 
-    /* KEYFRAMES */
-    @keyframes bar-pulse {
-      0%, 100% { filter: brightness(1); }
-      50% { filter: brightness(1.2); }
+    @keyframes text-pulse {
+      from { opacity: 1; transform: scale(1); }
+      to { opacity: 0.7; transform: scale(1.05); }
     }
 
-    @keyframes winner-flash {
-      0%, 100% { filter: brightness(1.1) saturate(1.2); box-shadow: 0 0 10px #facc15
+    @keyframes winner-glow {
+      from { filter: brightness(1); box-shadow: 0 0 5px #facc15; }
+      to { filter: brightness(1.8); box-shadow: 0 0 25px #facc15; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="dynamic-bar-chart">Loading analytics...</div>
+
+  <script>
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSXwF-92T09SgCmFnFLk6NjAWwK52BxFpyivdtrFtFWv-c4DdrF1jgpgZg7jWsyASCqVP7TxyDKVuH4/pub?gid=0&single=true&output=csv';
+
+    const terminalColors = {
+      "Birmingham": "#facc15",
+      "Scottsboro": "#84cc16",
+      "Broken Bow": "#0ea5e9",
+      "Starke": "#ef4444",
+      "Camden": "#10b981"
+    };
+
+    async function fetchSheetData() {
+      try {
+        const response = await fetch(CSV_URL);
+        const csvText = await response.text();
+        const rows = csvText.trim().split('\n').map(row => 
+          row.split(',').map(cell => cell.replace(/"/g, '').trim())
+        );
+
+        if (rows.length <= 1) return;
+
+        const chartData = rows.slice(1).map(row => ({
+          terminal: row[0],
+          value: parseInt(row[1]) || 0
+        })).filter(item => item.terminal !== "");
+
+        renderChart(chartData);
+      } catch (e) {
+        document.getElementById('dynamic-bar-chart').innerText = "Failed to load data.";
+      }
+    }
+
+    function renderChart(data) {
+      const container = document.getElementById('dynamic-bar-chart');
+      container.innerHTML = ''; 
+      
+      const maxValue = Math.max(...data.map(d => d.value), 1);
+
+      data.forEach(item => {
+        const isWinner = item.value === maxValue && maxValue > 0;
+        const widthPercentage = (item.value / maxValue) * 100;
+        const baseColor = terminalColors[item.terminal] || "#64748b";
+
+        // Creating a gradient for the shimmer effect
+        const gradient = `linear-gradient(90deg, ${baseColor} 0%, #ffffff55 50%, ${baseColor} 100%)`;
+
+        container.innerHTML += `
+          <div class="bar-wrapper">
+            <span class="bar-label ${isWinner ? 'winner-label' : ''}">${item.terminal} ${isWinner ? '★ TOP' : ''}</span>
+            <div class="bar-track">
+              <div class="bar-fill ${isWinner ? 'winner-bar' : ''}" 
+                   style="width: 0%; background-image: ${gradient};" 
+                   data-width="${widthPercentage}%">
+                <span class="bar-value">${item.value}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      setTimeout(() => {
+        document.querySelectorAll('.bar-fill').forEach(bar => {
+          bar.style.width = bar.getAttribute('data-width');
+        });
+      }, 150);
+    }
+
+    fetchSheetData();
+    setInterval(fetchSheetData, 60000); // Auto-refresh every minute
+  </script>
+</body>
+</html>
