@@ -120,4 +120,47 @@
           dh: row[8],
           rev: row[12],
           // Clean ADR for numeric sorting
-          adrValue: parseFloat(row[15]?.replace(/[^0
+          adrValue: parseFloat(row[15]?.replace(/[^0-9.-]+/g, "")) || 0,
+          adrRaw: row[15]
+        }));
+
+        // Sort by ADR Descending
+        drivers.sort((a, b) => b.adrValue - a.adrValue);
+
+        // Render Top 7
+        container.innerHTML = '';
+        drivers.slice(0, 7).forEach((driver, index) => {
+          const isFirst = index === 0;
+          const card = document.createElement('div');
+          card.className = `driver-card ${isFirst ? 'top-spot' : ''}`;
+          
+          card.innerHTML = `
+            <div class="stat-group">
+              <span class="label">#${index + 1} DRIVER ID</span>
+              <span class="val highlight">${driver.id}</span>
+            </div>
+            <div class="stat-group">
+              <span class="label">MILES (E/L)</span>
+              <span class="val">${driver.milesE} / ${driver.milesL}</span>
+            </div>
+            <div class="stat-group">
+              <span class="label">DH% / REVENUE</span>
+              <span class="val">${driver.dh} | ${driver.rev}</span>
+            </div>
+            <div class="stat-group">
+              <span class="label">ADR</span>
+              <span class="val highlight adr-color">${driver.adrRaw}</span>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      } catch (e) {
+        console.error("Dashboard failed to load:", e);
+        document.getElementById('driver-stats-container').innerHTML = '<div class="loading">Error loading dashboard.</div>';
+      }
+    }
+
+    updateLeaderboard();
+  </script>
+</body>
+</html>
