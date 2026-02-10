@@ -1,36 +1,55 @@
-// This URL specifically targets the 'Last Acc' tab from your screenshot
+// This targets the 'Last Acc' tab specifically
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSXwF-92T09SgCmFnFLk6NjAWwK52BxFpyivdtrFtFWv-c4DdrF1jgpgZg7jWsyASCqVP7TxyDKVuH4/pub?gid=743293875&single=true&output=csv';
 
 async function initDashboard() {
     try {
+        // Fetch the CSV and add a timestamp to prevent browser caching
         const response = await fetch(CSV_URL + '&cache=' + new Date().getTime());
         const csvText = await response.text();
+        
+        // Split the CSV text into rows and columns
         const rows = csvText.split('\n').map(row => row.split(','));
 
-        if (rows.length >= 2) {
-            // 1. Title from Cell A1: "Last DOT Accident"
+        if (rows.length >= 3) {
+            // 1. Set Title from Cell A1 (removing any extra quotes)
             document.getElementById('ticker-title').innerText = rows[0][0].replace(/"/g, '');
             
-            // 2. Date from Cell B2 and Time from Cell B3
-            const datePart = rows[1][1].replace(/"/g, '').trim(); // 02/9/2026
-            const timePart = rows[2][1].replace(/"/g, '').trim(); // 11:20:00 AM
+            // 2. Combine Date (B2) and Time (B3)
+            const datePart = rows[1][1].replace(/"/g, '').trim(); 
+            const timePart = rows[2][1].replace(/"/g, '').trim(); 
+            const accidentTime = new Date(`${datePart} ${timePart}`).getTime();
             
-            const accidentDate = new Date(`${datePart} ${timePart}`).getTime();
-
-            if (!isNaN(accidentDate)) {
-                setInterval(() => {
-                    const now = new Date().getTime();
-                    const diff = Math.max(0, now - accidentDate);
-                    
-                    // Standard math to get total days
-                    document.getElementById('days').innerText = Math.floor(diff / 86400000);
-                }, 1000);
+            if (!isNaN(accidentTime)) {
+                runTicker(accidentTime);
             } else {
-                document.getElementById('ticker-title').innerText = "DATE ERROR: CHECK B2";
+                document.getElementById('ticker-title').innerText = "INVALID DATE FORMAT";
             }
         }
-    } catch (e) {
+    } catch (e) { 
+        console.error("CSV Fetch Error:", e); 
         document.getElementById('ticker-title').innerText = "CONNECTION ERROR";
     }
 }
+
+function runTicker(accidentTimestamp) {
+    const updateUI = () => {
+        const now = new Date().getTime();
+        const diff = Math.max(0, now - accidentTimestamp);
+
+        // Standard time math for the countdown/up
+        const d = Math.floor(diff / 86400000);
+        const h = Math.floor((diff % 86400000) / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+
+        document.getElementById('days').innerText = d;
+        document.getElementById('hours').innerText = h.toString().padStart(2, '0');
+        document.getElementById('minutes').innerText = m.toString().padStart(2, '0');
+        document.getElementById('seconds').innerText = s.toString().padStart(2, '0');
+    };
+
+    updateUI();
+    setInterval(updateUI, 1000);
+}
+
 initDashboard();
