@@ -1,81 +1,59 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Safety Ticker</title>
-    <style>
-        /* Keep your existing CSS here */
-        body { background-color: #020617; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        #error-msg { color: #ef4444; font-weight: bold; text-align: center; display: none; }
-        .safety-dashboard { display: none; } /* Hidden until data loads */
-    </style>
-</head>
-<body>
+async function initDashboard() {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+    
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
 
-<div id="error-msg"></div>
-
-<div id="dashboard" class="safety-dashboard" style="display:block; width: 90%; max-width: 800px;">
-    <h1 id="ticker-title" style="text-align:center; color:#ffcc00;">Loading...</h1>
-    <div style="display: flex; justify-content: space-around; font-size: 2rem; text-align: center;">
-        <div><div id="days">0</div><small>DAYS</small></div>
-        <div><div id="hours">00</div><small>HOURS</small></div>
-        <div><div id="minutes">00</div><small>MINS</small></div>
-        <div><div id="seconds">00</div><small>SECS</small></div>
-    </div>
-</div>
-
-<script>
-    const SHEET_ID = '19sNWZ7NxHaE8Zjlzs57vZAKA_XBHBebPKAd59vUyjzc';
-    const API_KEY = 'AIzaSyAGpCyqpw0isbwpVTSi2KfG3gpuGYu86F4';
-    const RANGE = "'Last Acc'!A1:B3"; 
-
-    async function initDashboard() {
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
-        const errorDiv = document.getElementById('error-msg');
-        
-        try {
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            if (data.error) {
-                throw new Error(data.error.message);
-            }
-
-            const rows = data.values;
-            if (!rows || rows.length < 3) {
-                throw new Error("Data missing in cells A1, B2, or B3");
-            }
-
-            document.getElementById('ticker-title').innerText = rows[0][0];
-            const accidentDateStr = `${rows[1][1]} ${rows[2][1]}`;
-            const accidentTime = new Date(accidentDateStr).getTime();
-            
-            if (isNaN(accidentTime)) {
-                throw new Error("Date in Sheet is not formatted correctly (Use MM/DD/YYYY)");
-            }
-
-            runTicker(accidentTime);
-
-        } catch (e) { 
-            console.error(e);
-            errorDiv.style.display = 'block';
-            errorDiv.innerText = "⚠️ " + e.message;
-            document.getElementById('ticker-title').innerText = "Dashboard Error";
+        // Check if Google returned an error (like an expired API key)
+        if (data.error) {
+            console.error("Google API Error:", data.error.message);
+            document.getElementById('ticker-title').innerText = "API AUTH ERROR";
+            return;
         }
-    }
 
-    function runTicker(timestamp) {
-        setInterval(() => {
-            const now = new Date().getTime();
-            const diff = Math.max(0, now - timestamp);
-            document.getElementById('days').innerText = Math.floor(diff / 86400000);
-            document.getElementById('hours').innerText = Math.floor((diff % 86400000) / 3600000).toString().padStart(2, '0');
-            document.getElementById('minutes').innerText = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
-            document.getElementById('seconds').innerText = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
-        }, 1000);
+        const rows = data.values;
+        if (rows && rows.length >= 3) {
+            document.getElementById('ticker-title').innerText = rows[0][0];
+            
+            // Forces the date to be interpreted as a clean string to prevent "NaN"
+            const dateStr = String(rows[1][1]).trim();
+            const timeStr = String(rows[2][1]).trim();
+            const accidentTime = new Date(`${dateStr} ${timeStr}`).getTime();
+            
+            if (!isNaN(accidentTime)) {
+                // Only show the dashboard once we have a valid number
+                document.querySelector('.safety-dashboard').style.display = 'block';
+                runTicker(accidentTime);
+            } else {
+                document.getElementById('ticker-title').innerText = "DATE FORMAT ERROR";
+            }
+        }
+    } catch (e) { 
+        console.error("Network Error:", e); 
+        document.getElementById('ticker-title').innerText = "OFFLINE";
     }
+}
 
-    initDashboard();
-</script>
-</body>
-</html>
+function runTicker(accidentTimestamp) {
+    const updateUI = () => {
+        const now = new Date().getTime();
+        const diff = Math.max(0, now - accidentTimestamp);
+
+        // Standard time math for the cycles
+        const d = Math.floor(diff / 86400000);
+        const h = Math.floor((diff % 86400000) / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+
+        document.getElementById('days').innerText = d;
+        document.getElementById('hours').innerText = h.toString().padStart(2, '0');
+        document.getElementById('minutes').innerText = m.toString().padStart(2, '0');
+        document.getElementById('seconds').innerText = s.toString().padStart(2, '0');
+    };
+
+    updateUI();
+    setInterval(updateUI, 1000);
+}
+
+initDashboard();
