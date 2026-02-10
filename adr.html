@@ -1,5 +1,38 @@
-<script>
-    /* JavaScript Logic - Updated to use CSV Link */
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fuel Tank Analytics</title>
+  <style>
+    body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+    .animation-container { display: flex; flex-direction: column; align-items: center; }
+    .fuel-tank { position: relative; width: 140px; height: 280px; background: #111; border: 4px solid #444; border-radius: 25px; overflow: hidden; }
+    .liquid { position: absolute; bottom: 0; width: 100%; height: 0%; background: linear-gradient(to top, #d35400, #f1c40f); transition: height 1.5s ease-in-out; }
+    .under-goal .liquid { background: linear-gradient(to top, #922b21, #e74c3c); }
+    .over-goal .liquid { background: linear-gradient(to top, #1e8449, #2ecc71); }
+    .tank-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20; color: white; font-family: Arial; font-size: 2rem; font-weight: bold; }
+    .value-display { margin-top: 15px; font-family: Arial; text-align: center; color: white; }
+    .actual-val { font-size: 1.5rem; font-weight: bold; }
+    .status-over { color: #2ecc71; }
+    .status-under { color: #e74c3c; }
+    .goal-val { color: #888; font-size: 1.1rem; }
+  </style>
+</head>
+<body>
+
+  <div id="main-container" class="animation-container">
+    <div class="fuel-tank">
+      <div class="tank-label"><span id="adr-percent">0</span>%</div>
+      <div id="liquid-level" class="liquid"></div>
+    </div>
+    <div class="value-display">
+      <div class="actual-val">Actual: <span id="adr-actual">$0</span> <span id="status-icon"></span></div>
+      <div class="goal-val">Monthly Goal: <span id="adr-goal">$0</span></div>
+    </div>
+  </div>
+
+  <script>
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSXwF-92T09SgCmFnFLk6NjAWwK52BxFpyivdtrFtFWv-c4DdrF1jgpgZg7jWsyASCqVP7TxyDKVuH4/pub?gid=1780048900&single=true&output=csv';
 
     async function updateFuelTank() {
@@ -7,62 +40,50 @@
         const response = await fetch(CSV_URL);
         const csvText = await response.text();
         
-        // Split by lines and then by commas
-        const rows = csvText.split('\n').map(row => row.split(','));
+        // Correctly parse rows and clean up quotes/spaces
+        const rows = csvText.split('\n').map(row => 
+          row.split(',').map(cell => cell.replace(/"/g, '').trim())
+        );
 
-        // Based on your Sheet, Goal is H9 (index 7) and Actual is I9 (index 8)
-        // We find the correct row (Row 9 is index 8 in a 0-based array)
-        const targetRow = rows[8]; 
+        const targetRow = rows[8]; // Row 9
+        if (!targetRow || targetRow.length < 9) return;
+
+        const cleanNum = (val) => parseFloat(val.replace(/[^0-9.-]+/g, "")) || 0;
         
-        if (!targetRow) {
-          console.error('Row 9 not found in CSV.');
-          return;
-        }
-
-        const cleanNum = (str) => {
-            if (!str) return 0;
-            return parseFloat(str.replace(/[^0-9.-]+/g, "")) || 0;
-        };
-
         const goal = cleanNum(targetRow[7]);   // Column H
         const actual = cleanNum(targetRow[8]); // Column I
         
         const percentage = Math.round((actual / (goal || 1)) * 100);
-        // Visual cap at 92% so waves don't fly out of the tank
-        const visualHeight = percentage >= 95 ? 92 : percentage;
+        const visualHeight = percentage >= 95 ? 92 : (percentage < 5 ? 5 : percentage);
 
+        // Update Text UI
         document.getElementById('liquid-level').style.height = visualHeight + '%';
         document.getElementById('adr-percent').innerText = percentage;
+        document.getElementById('adr-actual').innerText = '$' + actual.toLocaleString();
+        document.getElementById('adr-goal').innerText = '$' + goal.toLocaleString();
 
-        const actualElement = document.getElementById('adr-actual');
-        const iconElement = document.getElementById('status-icon');
-        const goalElement = document.getElementById('adr-goal');
         const mainContainer = document.getElementById('main-container');
+        const iconElement = document.getElementById('status-icon');
+        const actualElement = document.getElementById('adr-actual');
 
-        actualElement.innerText = '$' + actual.toLocaleString();
-        goalElement.innerText = '$' + goal.toLocaleString();
-
-        // Update Performance Colors & Classes
-        if (actual > goal) {
+        // Apply Performance Colors & Classes
+        if (actual >= goal) {
+          mainContainer.className = "animation-container over-goal";
           actualElement.parentElement.className = "actual-val status-over";
-          mainContainer.className = "animation-container over-goal";
-          iconElement.innerHTML = "▲"; 
-        } else if (actual < goal) {
-          actualElement.parentElement.className = "actual-val status-under";
-          mainContainer.className = "animation-container under-goal";
-          iconElement.innerHTML = "▼";
+          iconElement.innerHTML = "▲";
         } else {
-          actualElement.parentElement.className = "actual-val status-met";
-          mainContainer.className = "animation-container over-goal";
-          iconElement.innerHTML = "=";
+          mainContainer.className = "animation-container under-goal";
+          actualElement.parentElement.className = "actual-val status-under";
+          iconElement.innerHTML = "▼";
         }
-
       } catch (error) {
-        console.error("Tank update failed:", error);
+        console.error("Update failed:", error);
       }
     }
 
+    // Initial call and refresh loop every 5 minutes
     updateFuelTank();
-    // Auto-refresh every 5 minutes
     setInterval(updateFuelTank, 300000);
   </script>
+</body>
+</html>
