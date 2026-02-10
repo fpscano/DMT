@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WC Injury Dashboard</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --caution-yellow: #ffcc00;
+            --dmt-blue: #002D62;
+        }
+
+        body {
+            background-color: #020617;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .safety-dashboard {
+            width: 100%;
+            max-width: 1000px;
+            background: var(--bg-dark);
+            border-radius: 20px;
+            border: 1px solid #334155;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .safety-header {
+            background: var(--caution-yellow);
+            padding: 25px 40px;
+            border-bottom: 6px solid var(--dmt-blue);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #ticker-title {
+            color: #000;
+            font-size: 28px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            margin: 0;
+            text-transform: uppercase;
+        }
+
+        .status-badge {
+            background: rgba(0, 0, 0, 0.1);
+            color: #000;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .safety-body { padding: 50px 40px; }
+
+        .timer-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+        }
+
+        .time-card {
+            background: var(--card-bg);
+            padding: 40px 20px;
+            border-radius: 16px;
+            border: 1px solid #334155;
+            text-align: center;
+        }
+
+        .number {
+            font-size: 84px;
+            font-weight: 900;
+            color: white;
+            line-height: 1;
+            margin-bottom: 10px;
+            font-variant-numeric: tabular-nums;
+            text-shadow: 0 0 20px rgba(255, 204, 0, 0.3);
+        }
+
+        .label {
+            color: #94a3b8;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="safety-dashboard">
+    <div class="safety-header">
+        <div class="header-content">
+            <h1 id="ticker-title">LOADING...</h1>
+            <div class="status-badge">● LIVE DATA</div>
+        </div>
+    </div>
+    <div class="safety-body">
+        <div class="timer-grid">
+            <div class="time-card"><div id="days" class="number">0</div><div class="label">DAYS</div></div>
+            <div class="time-card"><div id="hours" class="number">00</div><div class="label">HOURS</div></div>
+            <div class="time-card"><div id="minutes" class="number">00</div><div class="label">MINS</div></div>
+            <div class="time-card"><div id="seconds" class="number">00</div><div class="label">SECS</div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Targets the 'Last Acc' tab (gid=743293875)
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSXwF-92T09SgCmFnFLk6NjAWwK52BxFpyivdtrFtFWv-c4DdrF1jgpgZg7jWsyASCqVP7TxyDKVuH4/pub?gid=743293875&single=true&output=csv';
+
+    async function initDashboard() {
+        try {
+            const response = await fetch(CSV_URL + '&cache=' + new Date().getTime());
+            const csvText = await response.text();
+            const rows = csvText.split('\n').map(row => row.split(','));
+
+            if (rows.length >= 7) {
+                // 1. Set Title from Cell A5: "Last WC Injury"
+                document.getElementById('ticker-title').innerText = rows[4][0].replace(/"/g, '');
+                
+                // 2. Parse Date from Cell B6 and Time from Cell B7
+                const datePart = rows[5][1].replace(/"/g, '').trim(); // 1/27/2026
+                const timePart = rows[6][1].replace(/"/g, '').trim(); // 12:00:00 AM
+                
+                const injuryTime = new Date(`${datePart} ${timePart}`).getTime();
+
+                if (!isNaN(injuryTime)) {
+                    setInterval(() => {
+                        const now = new Date().getTime();
+                        const diff = Math.max(0, now - injuryTime);
+
+                        document.getElementById('days').innerText = Math.floor(diff / 86400000);
+                        document.getElementById('hours').innerText = Math.floor((diff % 86400000) / 3600000).toString().padStart(2, '0');
+                        document.getElementById('minutes').innerText = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+                        document.getElementById('seconds').innerText = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+                    }, 1000);
+                }
+            }
+        } catch (e) { 
+            document.getElementById('ticker-title').innerText = "CONNECTION ERROR";
+        }
+    }
+    initDashboard();
+</script>
+</body>
+</html>
