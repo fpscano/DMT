@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safety Investments</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-card: #1e293b;
+      --accent-gold: #facc15;
+      --accent-blue: #38bdf8;
+    }
+    body { 
+      background-color: var(--bg-dark); 
+      font-family: 'Inter', sans-serif; 
+      margin: 0; 
+      padding: 20px;
+      overflow: hidden;
+    }
+    .dashboard-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .dashboard-header h2 {
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #fff;
+      font-size: 2rem;
+      letter-spacing: 0.1em;
+      border-bottom: 4px solid var(--accent-blue);
+      display: inline-block;
+      padding-bottom: 8px;
+    }
+    .investment-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 15px;
+      max-width: 100%;
+      margin: 0 auto;
+    }
+    @keyframes goldWave {
+      0% {
+        box-shadow: 0 0 10px rgba(250, 204, 21, 0.3), 0 5px 10px rgba(0, 0, 0, 0.4);
+        border-color: rgba(250, 204, 21, 0.5);
+      }
+      50% {
+        box-shadow: 0 0 25px rgba(250, 204, 21, 0.7), 0 10px 20px rgba(0, 0, 0, 0.6);
+        border-color: rgba(250, 204, 21, 1);
+      }
+      100% {
+        box-shadow: 0 0 10px rgba(250, 204, 21, 0.3), 0 5px 10px rgba(0, 0, 0, 0.4);
+        border-color: rgba(250, 204, 21, 0.5);
+      }
+    }
+    .investment-card {
+      background: var(--bg-card);
+      border-radius: 20px;
+      border: 2px solid var(--accent-gold);
+      padding: 15px 5px;
+      text-align: center;
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: goldWave 3s ease-in-out infinite;
+      font-weight: 900;
+      font-size: 0.85rem;
+      background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      line-height: 1.2;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-wrapper">
+    <div class="safety-dashboard-container">
+      
+      <div class="dashboard-header">
+        <h2>Safety Investments</h2>
+      </div>
+      <div class="investment-grid">
+        <div class="investment-card">Equipment Life Cycle</div>
+        <div class="investment-card">Lane Departure Software</div>
+        <div class="investment-card">Samsara Fleet Management</div>
+        <div class="investment-card">DriveWyze Safety Plus</div>
+        <div class="investment-card">Drive Cam MVAI</div>
+        <div class="investment-card">Bendix Collision Mitigation System</div>
+        
+        <div class="investment-card">Mirror Eye Camera Systems</div>
+        <div class="investment-card">Driving Simulator</div>
+        <div class="investment-card">Drive For Gold / Online Training</div>
+        <div class="investment-card">Transportation Safety Services</div>
+        <div class="investment-card">RH Safety Consultants</div>
+        <div class="investment-card">FMCSA & Law Enforcement Training</div>
+        
+        <div class="investment-card">Regional Safety Managers</div>
+        <div class="investment-card">Safety Culture (I-Auditor)</div>
+        <div class="investment-card">Training Facilities for Hands On Training</div>
+        <div class="investment-card">Smith System Training</div>
+        <div class="investment-card">Co-Pilot Navigation</div>
+        <div class="investment-card">Defensive Driving Training</div>
+      </div>
+      
+    </div>
+  </div>
+</body>
+</html>
