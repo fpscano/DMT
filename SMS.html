@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FMCSA Safety Measurement System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --dmt-blue: #38bdf8;
+            --status-green: #10b981;
+            --status-yellow: #f59e0b;
+            --status-red: #ef4444;
+        }
+
+        body { 
+            background: #020617; 
+            padding: 20px; 
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        .sms-dashboard {
+            width: 1060px;
+            background: var(--bg-dark);
+            padding: 30px;
+            border-radius: 20px;
+            color: white;
+            border: 1px solid #334155;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .sms-header {
+            margin-bottom: 30px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 20px;
+        }
+
+        .header-main { display: flex; justify-content: space-between; align-items: center; }
+        .sms-header h1 { font-size: 24px; font-weight: 800; margin: 0; }
+        .sms-header p { color: #94a3b8; margin: 5px 0 0 0; font-size: 14px; }
+
+        .live-indicator {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--status-green);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .sms-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+
+        .category-card {
+            background: var(--card-bg);
+            padding: 30px 20px;
+            border-radius: 16px;
+            border: 1px solid #334155;
+            text-align: center;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .score-val { font-size: 56px; font-weight: 900; line-height: 1; margin-bottom: 10px; }
+        .cat-link { text-decoration: none; color: #94a3b8; font-size: 11px; font-weight: 800; text-transform: uppercase; display: block; margin-bottom: 10px; }
+        .card-logo img { width: 64px; height: 64px; object-fit: contain; margin-bottom: 20px; }
+        .threshold-pill { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px; }
+
+        /* --- ANIMATIONS --- */
+        @keyframes flash-red {
+            0%, 100% { border-color: var(--status-red); box-shadow: 0 0 5px var(--status-red); }
+            50% { border-color: #7f1d1d; box-shadow: 0 0 25px var(--status-red); }
+        }
+
+        @keyframes flash-yellow {
+            0%, 100% { border-color: var(--status-yellow); box-shadow: 0 0 5px var(--status-yellow); }
+            50% { border-color: #78350f; box-shadow: 0 0 25px var(--status-yellow); }
+        }
+
+        @keyframes green-blink {
+            0%, 100% { color: var(--status-green); opacity: 1; text-shadow: 0 0 10px var(--status-green); }
+            50% { color: #064e3b; opacity: 0.5; text-shadow: none; }
+        }
+
+        .over { animation: flash-red 1s infinite; border-bottom: 6px solid var(--status-red) !important; }
+        .near { animation: flash-yellow 1.5s infinite; border-bottom: 6px solid var(--status-yellow) !important; }
+        .below { border-bottom: 6px solid var(--status-green); }
+
+        .company-msg {
+            font-size: 0.95rem;
+            font-weight: 400;
+            font-style: italic;
+            text-align: center;
+            line-height: 1.4;
+            padding: 10px;
+        }
+
+        .congrats-text {
+            animation: green-blink 1s infinite;
+            font-size: 1.2rem;
+            font-weight: 900;
+        }
+    </style>
+</head>
+<body>
+
+<div class="sms-dashboard">
+    <div class="sms-header">
+        <div class="header-main">
+            <h1>FMCSA Safety Measurement System</h1>
+            <div class="live-indicator">● LIVE DATA</div>
+        </div>
+        <p>Carrier Performance vs. Intervention Thresholds</p>
+    </div>
+    
+    <div id="sms-container" class="sms-grid">
+        </div>
+</div>
+
+<script>
+const SHEET_ID = '19sNWZ7NxHaE8Zjlzs57vZAKA_XBHBebPKAd59vUyjzc';
+const API_KEY = 'AIzaSyAGpCyqpw0isbwpVTSi2KfG3gpuGYu86F4';
+const SMS_RANGE = 'SMS!A1:D8';
+
+const iconMap = {
+    "Unsafe": "https://ai.fmcsa.dot.gov/SMS/images/Icons/BASICs/UnsafeDriving.png",
+    "Crash": "https://ai.fmcsa.dot.gov/SMS/images/Icons/BASICs/CrashIndicator.png",
+    "HOS": "https://ai.fmcsa.dot.gov/SMS/images/Icons/BASICs/HOSCompliance.png",
+    "Veichle Main.": "https://ai.fmcsa.dot.gov/SMS/images/Icons/BASICs/VehicleMaint.png",
+    "Part40": "https://ai.fmcsa.dot.gov/SMS/images/Icons/BASICs/DrugsAlcohol.png",
+    "Hazmat": "https://ai.fmcsa.dot.gov/SMS/images/Icons/BASICs/HMCompliance.png",
+    "Driver Fitnes": "https://ai.fmcsa.dot.gov/SMS/images/Icons/BASICs/DriverFitness.png"
+};
+
+async function fetchAndRenderSMS() {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SMS_RANGE}?key=${API_KEY}`;
+    try {
+        const response = await fetch(url);
+        const result = await response.json();
+        const rows = result.values;
+        if (!rows || rows.length <= 1) return;
+
+        const smsData = rows.slice(1).map(row => ({
+            name: row[0],
+            score: parseFloat(row[1]) || 0,
+            threshold: parseFloat(row[2].replace('%', '')) || 0,
+            url: row[3],
+            logo: iconMap[row[0]] || ""
+        }));
+
+        renderDashboard(smsData);
+    } catch (error) {
+        console.error('Error fetching SMS data:', error);
+    }
+}
+
+function renderDashboard(data) {
+    const container = document.getElementById('sms-container');
+    container.innerHTML = '';
+    
+    // Logic to check if all categories are safely below thresholds
+    const isEverythingGreen = data.every(item => 
+        item.score < (item.threshold - 5)
+    );
+
+    data.forEach(item => {
+        let statusClass = 'below';
+        if (item.score >= item.threshold) statusClass = 'over';
+        else if (item.score >= (item.threshold - 5)) statusClass = 'near';
+
+        container.innerHTML += `
+            <div class="category-card ${statusClass}">
+                <div class="card-logo">
+                    <img src="${item.logo}" alt="${item.name}">
+                </div>
+                <a href="${item.url}" class="cat-link" target="_blank">${item.name}</a>
+                <div class="score-val">${item.score}%</div>
+                <div class="threshold-pill">THRESHOLD: ${item.threshold}%</div>
+            </div>
+        `;
+    });
+
+    // Add the DMT Branding card as the last item
+    let brandContent = '';
+    if (isEverythingGreen) {
+        brandContent = `
+            <div class="company-msg congrats-text">GREAT WORK EVERYONE!<br>
+            <span style="font-size: 0.8rem; color: white; font-style: normal;">SAFETY IS OUR #1 PRIORITY</span></div>`;
+    } else {
+        brandContent = `
+            <div class="company-msg">
+                OUR SCORES REFLECT OUR COMMITMENT TO SAFETY. HIGH PERCENTILES MEAN HIGHER RISK. 
+                STAY VIGILANT TO PROTECT THE DMT REPUTATION.
+            </div>`;
+    }
+
+    container.innerHTML += `
+        <div class="category-card dmt-brand">
+            ${brandContent}
+        </div>
+    `;
+}
+
+fetchAndRenderSMS();
+</script>
+
+</body>
+</html>
