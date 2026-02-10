@@ -1,61 +1,36 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Safety Dashboard</title>
-    <style>
-        body { background-color: #0f172a; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: 'Inter', sans-serif; color: white; }
-        .container { border: 4px solid #ffcc00; padding: 40px; border-radius: 20px; text-align: center; background: #1e293b; box-shadow: 0 0 30px rgba(255, 204, 0, 0.2); width: 80%; max-width: 600px; }
-        .number { font-size: 80px; font-weight: 900; color: #ffcc00; margin: 10px 0; }
-        .label { font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: #94a3b8; }
-        #ticker-title { font-size: 22px; margin-bottom: 10px; color: #fff; font-weight: bold; }
-    </style>
-</head>
-<body>
+// This URL specifically targets the 'Last Acc' tab from your screenshot
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSXwF-92T09SgCmFnFLk6NjAWwK52BxFpyivdtrFtFWv-c4DdrF1jgpgZg7jWsyASCqVP7TxyDKVuH4/pub?gid=743293875&single=true&output=csv';
 
-    <div class="container">
-        <div id="ticker-title">CONNECTING...</div>
-        <p class="number" id="days">0</p>
-        <p class="label">Days Since Last DOT Accident</p>
-    </div>
+async function initDashboard() {
+    try {
+        const response = await fetch(CSV_URL + '&cache=' + new Date().getTime());
+        const csvText = await response.text();
+        const rows = csvText.split('\n').map(row => row.split(','));
 
-    <script>
-        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSXwF-92T09SgCmFnFLk6NjAWwK52BxFpyivdtrFtFWv-c4DdrF1jgpgZg7jWsyASCqVP7TxyDKVuH4/pub?output=csv&cache=' + new Date().getTime();
+        if (rows.length >= 2) {
+            // 1. Title from Cell A1: "Last DOT Accident"
+            document.getElementById('ticker-title').innerText = rows[0][0].replace(/"/g, '');
+            
+            // 2. Date from Cell B2 and Time from Cell B3
+            const datePart = rows[1][1].replace(/"/g, '').trim(); // 02/9/2026
+            const timePart = rows[2][1].replace(/"/g, '').trim(); // 11:20:00 AM
+            
+            const accidentDate = new Date(`${datePart} ${timePart}`).getTime();
 
-        async function initDashboard() {
-            try {
-                const response = await fetch(CSV_URL);
-                if (!response.ok) throw new Error('Sheet not found');
-                
-                const csvText = await response.text();
-                const rows = csvText.split('\n').map(row => row.split(','));
-
-                if (rows.length >= 2) {
-                    // 1. Set Title from A1
-                    document.getElementById('ticker-title').innerText = rows[0][0].replace(/"/g, '');
+            if (!isNaN(accidentDate)) {
+                setInterval(() => {
+                    const now = new Date().getTime();
+                    const diff = Math.max(0, now - accidentDate);
                     
-                    // 2. Parse Date from B2
-                    const rawDateStr = rows[1][1].replace(/"/g, '').trim();
-                    const accidentDate = new Date(rawDateStr).getTime();
-
-                    if (!isNaN(accidentDate)) {
-                        // Start the actual counter
-                        setInterval(() => {
-                            const now = new Date().getTime();
-                            const diff = Math.max(0, now - accidentDate);
-                            document.getElementById('days').innerText = Math.floor(diff / 86400000);
-                        }, 1000);
-                    } else {
-                        document.getElementById('ticker-title').innerText = "DATE FORMAT ERROR (Check B2)";
-                    }
-                }
-            } catch (e) {
-                console.error(e);
-                document.getElementById('ticker-title').innerText = "CONNECTION ERROR: Check Publish Settings";
+                    // Standard math to get total days
+                    document.getElementById('days').innerText = Math.floor(diff / 86400000);
+                }, 1000);
+            } else {
+                document.getElementById('ticker-title').innerText = "DATE ERROR: CHECK B2";
             }
         }
-        initDashboard();
-    </script>
-</body>
-</html>
+    } catch (e) {
+        document.getElementById('ticker-title').innerText = "CONNECTION ERROR";
+    }
+}
+initDashboard();
