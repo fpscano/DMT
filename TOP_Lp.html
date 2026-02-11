@@ -75,10 +75,8 @@
   </div>
 
   <script>
-    // Helper to clean and format currency strings for math and display
     const cleanNum = (str) => {
       if (!str) return 0;
-      // Removes quotes, $, and commas so "1,200.00" becomes a real number
       return parseFloat(String(str).replace(/[^0-9.-]+/g, "")) || 0;
     };
     
@@ -90,4 +88,21 @@
     };
 
     async function updateLeaderboard() {
-      const CSV_URL = '
+      const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSXwF-92T09SgCmFnFLk6NjAWwK52BxFpyivdtrFtFWv-c4DdrF1jgpgZg7jWsyASCqVP7TxyDKVuH4/pub?gid=1773248352&single=true&output=csv';
+
+      try {
+        const response = await fetch(CSV_URL);
+        const csvText = await response.text();
+        
+        // Fail-safe row parsing
+        const rows = csvText.split('\n').filter(line => line.trim() !== "").map(row => {
+          // Matches values between commas, including those inside quotes
+          const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+          return matches ? matches : row.split(',');
+        });
+        
+        const container = document.getElementById('driver-stats-container');
+        const dataRows = rows.slice(1);
+
+        let drivers = dataRows.map(row => {
+          if (!row[0] || !row
