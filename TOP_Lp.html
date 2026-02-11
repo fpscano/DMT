@@ -29,14 +29,15 @@
   </div>
 
 <script>
-  // Strips symbols and forces a clean number for calculations
+  // Aggressive cleaner: removes everything except numbers and decimals
   const toNum = (val) => {
     if (!val) return 0;
-    const n = parseFloat(String(val).replace(/[$,]/g, ""));
+    // This regex removes ANY non-numeric character including commas, $, and spaces
+    const clean = String(val).replace(/[^0-9.]/g, "");
+    const n = parseFloat(clean);
     return isNaN(n) ? 0 : n;
   };
   
-  // Formats numbers back into clean Currency strings for display
   const toUSD = (val) => {
     return '$' + toNum(val).toLocaleString(undefined, {
       minimumFractionDigits: 2, 
@@ -51,10 +52,9 @@
       const response = await fetch(CSV_URL);
       const csvText = await response.text();
       
-      // Splits rows and handles quoted values correctly
       const rows = csvText.split('\n').filter(line => line.trim() !== "").map(row => {
-        const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-        return matches ? matches.map(m => m.replace(/^"|"$/g, "")) : [];
+        // Simple split since you removed commas in the spreadsheet
+        return row.split(',');
       });
       
       const container = document.getElementById('driver-stats-container');
@@ -63,24 +63,23 @@
       let drivers = dataRows.map(row => {
         if (row.length < 16) return null;
 
+        // Force both values to clean numbers before adding
         const empty = toNum(row[4]);  // Col E
         const loaded = toNum(row[5]); // Col F
         const totalMiles = empty + loaded;
         
-        // DH% Calculation (Empty / Total)
         const dh = totalMiles > 0 ? ((empty / totalMiles) * 100).toFixed(2) + '%' : '0.00%';
 
         return {
           id: row[0].trim(),
-          miles: totalMiles.toLocaleString(),
+          miles: totalMiles.toLocaleString(), // Formats with commas for display
           deadhead: dh,
           revenue: toUSD(row[12]),      // Col M
-          adrVal: toNum(row[15]),       // Col P (for sorting)
-          adrDisp: toUSD(row[15])       // Col P (for display)
+          adrVal: toNum(row[15]),       // Col P
+          adrDisp: toUSD(row[15])       // Col P
         };
       }).filter(d => d && d.id !== "");
 
-      // Sort by ADR Highest to Lowest
       drivers.sort((a, b) => b.adrVal - a.adrVal);
 
       container.innerHTML = '';
@@ -114,7 +113,7 @@
   }
 
   updateLeaderboard();
-  setInterval(updateLeaderboard, 300000); // Refresh every 5 mins
+  setInterval(updateLeaderboard, 300000);
 </script>
 </body>
 </html>
