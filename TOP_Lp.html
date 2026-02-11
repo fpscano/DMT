@@ -10,7 +10,7 @@
     .dashboard-wrapper { display: flex; flex-direction: column; gap: 8px; max-width: 850px; margin: auto; }
     .driver-card {
       background: #111827; border-left: 4px solid #38bdf8; border-radius: 6px;
-      padding: 10px 15px; display: grid; grid-template-columns: 1.2fr 1fr 1.2fr 1fr; 
+      padding: 10px 15px; display: grid; grid-template-columns: 1.2fr 1fr 1.2fr 1.1fr; 
       gap: 15px; align-items: center; font-size: 0.85rem;
     }
     .top-spot { background: #451a03; border-left: 6px solid #fbbf24; font-weight: 800; animation: gold-glow 1.5s infinite alternate; }
@@ -25,19 +25,23 @@
 </head>
 <body>
   <div id="driver-stats-container" class="dashboard-wrapper">
-    <div class="loading">Fetching Fresh Data...</div>
+    <div class="loading">Updating Leaderboard...</div>
   </div>
 
 <script>
-  // Helper to remove quotes, dollar signs, and commas before doing math
-  const cleanNum = (str) => {
-    if (!str) return 0;
-    let n = parseFloat(String(str).replace(/[$,"]/g, ""));
+  // Strips symbols and forces a clean number for calculations
+  const toNum = (val) => {
+    if (!val) return 0;
+    const n = parseFloat(String(val).replace(/[$,]/g, ""));
     return isNaN(n) ? 0 : n;
   };
   
-  const fmtUSD = (val) => {
-    return '$' + cleanNum(val).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  // Formats numbers back into clean Currency strings for display
+  const toUSD = (val) => {
+    return '$' + toNum(val).toLocaleString(undefined, {
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2
+    });
   };
 
   async function updateLeaderboard() {
@@ -47,7 +51,7 @@
       const response = await fetch(CSV_URL);
       const csvText = await response.text();
       
-      // FIX: Improved Parser that ignores commas inside quotes
+      // Splits rows and handles quoted values correctly
       const rows = csvText.split('\n').filter(line => line.trim() !== "").map(row => {
         const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
         return matches ? matches.map(m => m.replace(/^"|"$/g, "")) : [];
@@ -59,25 +63,25 @@
       let drivers = dataRows.map(row => {
         if (row.length < 16) return null;
 
-        const mEmpty = cleanNum(row[4]);  // Col E
-        const mLoaded = cleanNum(row[5]); // Col F
-        const totalMilesNum = mEmpty + mLoaded;
+        const empty = toNum(row[4]);  // Col E
+        const loaded = toNum(row[5]); // Col F
+        const totalMiles = empty + loaded;
         
-        // DH% = percentage of empty miles from total
-        const dhCalc = totalMilesNum > 0 ? ((mEmpty / totalMilesNum) * 100).toFixed(2) + '%' : '0.00%';
+        // DH% Calculation (Empty / Total)
+        const dh = totalMiles > 0 ? ((empty / totalMiles) * 100).toFixed(2) + '%' : '0.00%';
 
         return {
           id: row[0].trim(),
-          totalMiles: totalMilesNum.toLocaleString(), // Properly adds commas for display
-          dh: dhCalc,
-          rev: fmtUSD(row[12]), 
-          adrValue: cleanNum(row[15]), 
-          adrFormatted: fmtUSD(row[15]) 
+          miles: totalMiles.toLocaleString(),
+          deadhead: dh,
+          revenue: toUSD(row[12]),      // Col M
+          adrVal: toNum(row[15]),       // Col P (for sorting)
+          adrDisp: toUSD(row[15])       // Col P (for display)
         };
-      }).filter(d => d !== null && d.id !== "");
+      }).filter(d => d && d.id !== "");
 
-      // Sort by ADR (Highest to Lowest)
-      drivers.sort((a, b) => b.adrValue - a.adrValue);
+      // Sort by ADR Highest to Lowest
+      drivers.sort((a, b) => b.adrVal - a.adrVal);
 
       container.innerHTML = '';
       drivers.slice(0, 7).forEach((driver, index) => {
@@ -85,20 +89,32 @@
         const card = document.createElement('div');
         card.className = `driver-card ${isFirst ? 'top-spot' : ''}`;
         card.innerHTML = `
-          <div class="stat-group"><span class="label">#${index + 1} DRIVER ID</span><span class="val highlight">${driver.id}</span></div>
-          <div class="stat-group"><span class="label">TOTAL MILES | DH%</span><span class="val">${driver.totalMiles} | ${driver.dh}</span></div>
-          <div class="stat-group"><span class="label">TOTAL REVENUE</span><span class="val">${driver.rev}</span></div>
-          <div class="stat-group"><span class="label">ADR</span><span class="val highlight adr-color">${driver.adrFormatted}</span></div>
+          <div class="stat-group">
+            <span class="label">#${index + 1} DRIVER ID</span>
+            <span class="val highlight">${driver.id}</span>
+          </div>
+          <div class="stat-group">
+            <span class="label">TOTAL MILES | DH%</span>
+            <span class="val">${driver.miles} | ${driver.deadhead}</span>
+          </div>
+          <div class="stat-group">
+            <span class="label">TOTAL REVENUE</span>
+            <span class="val">${driver.revenue}</span>
+          </div>
+          <div class="stat-group">
+            <span class="label">ADR</span>
+            <span class="val highlight adr-color">${driver.adrDisp}</span>
+          </div>
         `;
         container.appendChild(card);
       });
     } catch (e) {
-      console.error("Error:", e);
+      console.error("Dashboard Error:", e);
     }
   }
 
   updateLeaderboard();
-  setInterval(updateLeaderboard, 300000); // 5-minute refresh
+  setInterval(updateLeaderboard, 300000); // Refresh every 5 mins
 </script>
 </body>
 </html>
