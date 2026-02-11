@@ -125,9 +125,8 @@
 </div>
 
 <script>
-const SHEET_ID = '19sNWZ7NxHaE8Zjlzs57vZAKA_XBHBebPKAd59vUyjzc';
-const API_KEY = 'AIzaSyAGpCyqpw0isbwpVTSi2KfG3gpuGYu86F4';
-const SMS_RANGE = 'SMS!A1:D8';
+// Updated to use the Published CSV URL directly
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSXwF-92T09SgCmFnFLk6NjAWwK52BxFpyivdtrFtFWv-c4DdrF1jgpgZg7jWsyASCqVP7TxyDKVuH4/pub?gid=17449112&single=true&output=csv';
 
 const iconMap = {
     "Unsafe": "https://ai.fmcsa.dot.gov/SMS/images/Icons/BASICs/UnsafeDriving.png",
@@ -139,21 +138,29 @@ const iconMap = {
     "Driver Fitnes": "https://ai.fmcsa.dot.gov/SMS/images/Icons/BASICs/DriverFitness.png"
 };
 
+// CSV text parser
+function parseCSV(text) {
+    return text.split('\n').map(row => row.split(','));
+}
+
 async function fetchAndRenderSMS() {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SMS_RANGE}?key=${API_KEY}`;
     try {
-        const response = await fetch(url);
-        const result = await response.json();
-        const rows = result.values;
+        const response = await fetch(CSV_URL);
+        const csvText = await response.text();
+        const rows = parseCSV(csvText);
+        
         if (!rows || rows.length <= 1) return;
 
-        const smsData = rows.slice(1).map(row => ({
-            name: row[0],
-            score: parseFloat(row[1]) || 0,
-            threshold: parseFloat(row[2].replace('%', '')) || 0,
-            url: row[3],
-            logo: iconMap[row[0]] || ""
-        }));
+        const smsData = rows.slice(1).map(row => {
+            if (row.length < 3) return null;
+            return {
+                name: row[0].trim(),
+                score: parseFloat(row[1]) || 0,
+                threshold: parseFloat(row[2].toString().replace('%', '')) || 0,
+                url: row[3] ? row[3].trim() : "#",
+                logo: iconMap[row[0].trim()] || ""
+            };
+        }).filter(item => item !== null);
 
         renderDashboard(smsData);
     } catch (error) {
@@ -165,7 +172,6 @@ function renderDashboard(data) {
     const container = document.getElementById('sms-container');
     container.innerHTML = '';
     
-    // Logic to check if all categories are safely below thresholds
     const isEverythingGreen = data.every(item => 
         item.score < (item.threshold - 5)
     );
@@ -187,7 +193,6 @@ function renderDashboard(data) {
         `;
     });
 
-    // Add the DMT Branding card as the last item
     let brandContent = '';
     if (isEverythingGreen) {
         brandContent = `
