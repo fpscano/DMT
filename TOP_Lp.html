@@ -5,24 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Top Performer Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  
   <style>
-    body {
-      background: #000;
-      font-family: 'Inter', sans-serif;
-      color: #fff;
-      padding: 10px;
-      margin: 0;
-    }
-
-    .dashboard-wrapper {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      max-width: 850px;
-      margin: auto;
-    }
-
+    body { background: #000; font-family: 'Inter', sans-serif; color: #fff; padding: 10px; margin: 0; }
+    .dashboard-wrapper { display: flex; flex-direction: column; gap: 8px; max-width: 850px; margin: auto; }
     .driver-card {
       background: #111827;
       border-left: 4px solid #38bdf8;
@@ -34,50 +19,36 @@
       align-items: center;
       font-size: 0.85rem;
     }
-
     .top-spot {
       background: #451a03;
       border-left: 6px solid #fbbf24;
       font-weight: 800;
       animation: gold-glow 1.5s infinite alternate;
     }
-
     @keyframes gold-glow {
       from { box-shadow: 0 0 5px #fbbf24; background: #451a03; }
       to { box-shadow: 0 0 20px #fbbf24; background: #78350f; }
     }
-
     .stat-group { display: flex; flex-direction: column; }
-
-    .label {
-      font-size: 0.65rem;
-      color: #64748b;
-      text-transform: uppercase;
-      margin-bottom: 2px;
-    }
-
+    .label { font-size: 0.65rem; color: #64748b; text-transform: uppercase; margin-bottom: 2px; }
     .val { color: #f8fafc; font-weight: 600; }
     .highlight { color: #38bdf8; font-size: 1rem; }
     .adr-color { color: #fbbf24; font-weight: 800; }
-
-    .loading {
-      text-align: center;
-      padding: 20px;
-      font-style: italic;
-      color: #64748b;
-    }
+    .loading { text-align: center; padding: 20px; font-style: italic; color: #64748b; }
   </style>
 </head>
 <body>
-
   <div id="driver-stats-container" class="dashboard-wrapper">
     <div class="loading">Loading Top Performers...</div>
   </div>
 
   <script>
+    // Helper to clean raw spreadsheet strings into numbers
+    const cleanNum = (str) => parseFloat(String(str).replace(/[^0-9.-]+/g, "")) || 0;
+
     // Helper to format currency
     const fmtUSD = (val) => {
-      const num = parseFloat(String(val).replace(/[^0-9.-]+/g, "")) || 0;
+      const num = cleanNum(val);
       return '$' + num.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
     };
 
@@ -93,23 +64,24 @@
         const dataRows = rows.slice(1);
 
         let drivers = dataRows.map(row => {
-          const mEmpty = parseFloat(row[4]) || 0;
-          const mLoaded = parseFloat(row[5]) || 0;
-          const totalMiles = mEmpty + mLoaded;
+          const emptyMiles = cleanNum(row[4]);  // Column E
+          const loadedMiles = cleanNum(row[5]); // Column F
+          const totalMiles = emptyMiles + loadedMiles;
           
-          // Calculate DH% (Deadhead) as empty miles / total miles
-          const dhPercent = totalMiles > 0 ? ((mEmpty / totalMiles) * 100).toFixed(2) + '%' : '0%';
+          // DH% = (Empty Miles / Total Miles)
+          const dhCalc = totalMiles > 0 ? ((emptyMiles / totalMiles) * 100).toFixed(2) + '%' : '0%';
 
           return {
-            id: row[0],
+            id: row[0], // Column A
             totalMiles: totalMiles.toLocaleString(),
-            dh: dhPercent,
-            rev: fmtUSD(row[12]),
-            adrValue: parseFloat(row[15]?.replace(/[^0-9.-]+/g, "")) || 0,
-            adrFormatted: fmtUSD(row[15])
+            dh: dhCalc,
+            rev: fmtUSD(row[12]), // Column M (Total Revenue)
+            adrValue: cleanNum(row[15]), // Column P (For Sorting)
+            adrFormatted: fmtUSD(row[15]) // Column P (Display)
           };
         }).filter(d => d.id);
 
+        // Sort by ADR (Highest to Lowest)
         drivers.sort((a, b) => b.adrValue - a.adrValue);
 
         container.innerHTML = '';
