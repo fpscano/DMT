@@ -29,7 +29,7 @@
   </div>
 
 <script>
-  // This helper removes "$", quotes, and commas so math works correctly
+  // This helper removes "$", quotes, and commas so math works on the FULL number
   const cleanNum = (str) => {
     if (!str) return 0;
     let n = parseFloat(String(str).replace(/[$,"]/g, ""));
@@ -47,9 +47,8 @@
       const response = await fetch(CSV_URL);
       const csvText = await response.text();
       
-      // FIX: Improved CSV Splitter that ignores commas inside quotes
+      // FIX: Regex that ignores commas inside quotes (like "1,200")
       const rows = csvText.split('\n').filter(line => line.trim() !== "").map(row => {
-        // This regex ensures "$10,500.00" stays as one value
         const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
         return matches ? matches.map(m => m.replace(/^"|"$/g, "")) : [];
       });
@@ -58,25 +57,25 @@
       const dataRows = rows.slice(1);
 
       let drivers = dataRows.map(row => {
-        // Skip rows that don't have enough columns
         if (row.length < 16) return null;
 
-        const mEmpty = cleanNum(row[4]);  // Column E
-        const mLoaded = cleanNum(row[5]); // Column F
-        const totalMiles = mEmpty + mLoaded;
-        const dhCalc = totalMiles > 0 ? ((mEmpty / totalMiles) * 100).toFixed(2) + '%' : '0.00%';
+        const mEmpty = cleanNum(row[4]);  // Col E
+        const mLoaded = cleanNum(row[5]); // Col F
+        const totalMilesNum = mEmpty + mLoaded;
+        
+        // DH% = percentage of empty miles from total
+        const dhCalc = totalMilesNum > 0 ? ((mEmpty / totalMilesNum) * 100).toFixed(2) + '%' : '0.00%';
 
         return {
-          id: row[0].trim(),           // Column A
-          totalMiles: totalMiles.toLocaleString(), 
+          id: row[0].trim(),
+          totalMiles: totalMilesNum.toLocaleString(), // Adds commas back for display ONLY
           dh: dhCalc,
-          rev: fmtUSD(row[12]),        // Column M
-          adrValue: cleanNum(row[15]), // Column P (for sorting)
-          adrFormatted: fmtUSD(row[15]) // Column P (display)
+          rev: fmtUSD(row[12]), 
+          adrValue: cleanNum(row[15]), 
+          adrFormatted: fmtUSD(row[15]) 
         };
       }).filter(d => d !== null && d.id !== "");
 
-      // Sort by ADR (Highest to Lowest)
       drivers.sort((a, b) => b.adrValue - a.adrValue);
 
       container.innerHTML = '';
@@ -94,12 +93,11 @@
       });
     } catch (e) {
       console.error("Error:", e);
-      document.getElementById('driver-stats-container').innerHTML = `<div class="loading">Error: ${e.message}</div>`;
     }
   }
 
   updateLeaderboard();
-  setInterval(updateLeaderboard, 300000); // Update every 5 minutes
+  setInterval(updateLeaderboard, 300000);
 </script>
 </body>
 </html>
