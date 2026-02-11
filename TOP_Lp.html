@@ -123,3 +123,20 @@
             <div class="stat-group">
               <span class="label">DH% / REVENUE</span>
               <span class="val">${driver.dh} | ${driver.rev}</span>
+            </div>
+            <div class="stat-group">
+              <span class="label">ADR</span>
+              <span class="val highlight adr-color">${driver.adrRaw}</span>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      } catch (e) {
+        console.error("Dashboard failed to load:", e);
+      }
+    }
+
+    updateLeaderboard();
+  </script>
+</body>
+</html>
