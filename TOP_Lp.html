@@ -43,79 +43,88 @@
   </div>
 
   <script>
-    // Helper to clean raw spreadsheet strings into numbers
-    const cleanNum = (str) => parseFloat(String(str).replace(/[^0-9.-]+/g, "")) || 0;
+  // Helper to strictly clean and format currency strings for math and display
+  // This removes "$", quotes, and commas so "12,345.00" becomes a real number
+  const cleanNum = (str) => parseFloat(String(str).replace(/[^0-9.-]+/g, "")) || 0;
+  
+  const fmtUSD = (val) => {
+    return '$' + cleanNum(val).toLocaleString(undefined, {
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2
+    });
+  };
 
-    // Helper to format currency
-    const fmtUSD = (val) => {
-      const num = cleanNum(val);
-      return '$' + num.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    };
+  async function updateLeaderboard() {
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSXwF-92T09SgCmFnFLk6NjAWwK52BxFpyivdtrFtFWv-c4DdrF1jgpgZg7jWsyASCqVP7TxyDKVuH4/pub?gid=1773248352&single=true&output=csv';
 
-    async function updateLeaderboard() {
-      const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSXwF-92T09SgCmFnFLk6NjAWwK52BxFpyivdtrFtFWv-c4DdrF1jgpgZg7jWsyASCqVP7TxyDKVuH4/pub?gid=1773248352&single=true&output=csv';
+    try {
+      const response = await fetch(CSV_URL);
+      const csvText = await response.text();
+      
+      // Split rows and handle quoted values correctly
+      const rows = csvText.split('\n').map(row => {
+        return row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || row.split(',');
+      });
+      
+      const container = document.getElementById('driver-stats-container');
+      const dataRows = rows.slice(1);
 
-      try {
-        const response = await fetch(CSV_URL);
-        const csvText = await response.text();
-        const rows = csvText.split('\n').map(row => row.split(','));
-        const container = document.getElementById('driver-stats-container');
+      let drivers = dataRows.map(row => {
+        const id = row[0] ? row[0].replace(/"/g, '').trim() : "";
         
-        const dataRows = rows.slice(1);
+        // Fix: Clean miles before adding them together
+        const mEmpty = cleanNum(row[4]); // Column E
+        const mLoaded = cleanNum(row[5]); // Column F
+        const totalMiles = mEmpty + mLoaded;
+        
+        // DH% Math
+        const dhPercent = totalMiles > 0 
+          ? ((mEmpty / totalMiles) * 100).toFixed(2) + '%' 
+          : '0.00%';
 
-        let drivers = dataRows.map(row => {
-          const emptyMiles = cleanNum(row[4]);  // Column E
-          const loadedMiles = cleanNum(row[5]); // Column F
-          const totalMiles = emptyMiles + loadedMiles;
-          
-          // DH% = (Empty Miles / Total Miles)
-          const dhCalc = totalMiles > 0 ? ((emptyMiles / totalMiles) * 100).toFixed(2) + '%' : '0%';
+        return {
+          id: id,
+          totalMiles: totalMiles.toLocaleString(), // Adds commas to miles
+          dh: dhPercent,
+          rev: fmtUSD(row[12]), // Column M (Total Revenue)
+          adrValue: cleanNum(row[15]), // For Sorting
+          adrFormatted: fmtUSD(row[15]) // Column P (ADR)
+        };
+      }).filter(d => d.id && d.id !== "Rank Driver Id");
 
-          return {
-            id: row[0], // Column A
-            totalMiles: totalMiles.toLocaleString(),
-            dh: dhCalc,
-            rev: fmtUSD(row[12]), // Column M (Total Revenue)
-            adrValue: cleanNum(row[15]), // Column P (For Sorting)
-            adrFormatted: fmtUSD(row[15]) // Column P (Display)
-          };
-        }).filter(d => d.id);
+      // Sort by Highest ADR
+      drivers.sort((a, b) => b.adrValue - a.adrValue);
 
-        // Sort by ADR (Highest to Lowest)
-        drivers.sort((a, b) => b.adrValue - a.adrValue);
-
-        container.innerHTML = '';
-        drivers.slice(0, 7).forEach((driver, index) => {
-          const isFirst = index === 0;
-          const card = document.createElement('div');
-          card.className = `driver-card ${isFirst ? 'top-spot' : ''}`;
-          
-          card.innerHTML = `
-            <div class="stat-group">
-              <span class="label">#${index + 1} DRIVER ID</span>
-              <span class="val highlight">${driver.id}</span>
-            </div>
-            <div class="stat-group">
-              <span class="label">TOTAL MILES | DH%</span>
-              <span class="val">${driver.totalMiles} | ${driver.dh}</span>
-            </div>
-            <div class="stat-group">
-              <span class="label">TOTAL REVENUE</span>
-              <span class="val">${driver.rev}</span>
-            </div>
-            <div class="stat-group">
-              <span class="label">ADR</span>
-              <span class="val highlight adr-color">${driver.adrFormatted}</span>
-            </div>
-          `;
-          container.appendChild(card);
-        });
-      } catch (e) {
-        console.error("Dashboard failed to load:", e);
-      }
+      container.innerHTML = '';
+      drivers.slice(0, 7).forEach((driver, index) => {
+        const isFirst = index === 0;
+        const card = document.createElement('div');
+        card.className = `driver-card ${isFirst ? 'top-spot' : ''}`;
+        
+        card.innerHTML = `
+          <div class="stat-group">
+            <span class="label">#${index + 1} DRIVER ID</span>
+            <span class="val highlight">${driver.id}</span>
+          </div>
+          <div class="stat-group">
+            <span class="label">TOTAL MILES | DH%</span>
+            <span class="val">${driver.totalMiles} | ${driver.dh}</span>
+          </div>
+          <div class="stat-group">
+            <span class="label">TOTAL REVENUE</span>
+            <span class="val">${driver.rev}</span>
+          </div>
+          <div class="stat-group">
+            <span class="label">ADR</span>
+            <span class="val highlight adr-color">${driver.adrFormatted}</span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    } catch (e) {
+      console.error("Dashboard failed to load:", e);
     }
+  }
 
-    updateLeaderboard();
-  </script>
-</body>
-</html>
+  updateLeaderboard();
+</script>
