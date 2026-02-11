@@ -29,10 +29,10 @@
   </div>
 
 <script>
-  // Advanced Currency & Number Cleaner
+  // This helper removes "$", quotes, and commas so math works correctly
   const cleanNum = (str) => {
     if (!str) return 0;
-    let n = parseFloat(String(str).replace(/[$,]/g, ""));
+    let n = parseFloat(String(str).replace(/[$,"]/g, ""));
     return isNaN(n) ? 0 : n;
   };
   
@@ -44,46 +44,42 @@
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSXwF-92T09SgCmFnFLk6NjAWwK52BxFpyivdtrFtFWv-c4DdrF1jgpgZg7jWsyASCqVP7TxyDKVuH4/pub?gid=1773248352&single=true&output=csv';
 
     try {
-      console.log("Starting fetch...");
       const response = await fetch(CSV_URL);
       const csvText = await response.text();
       
-      // Robust CSV Splitter
+      // FIX: Improved CSV Splitter that ignores commas inside quotes
       const rows = csvText.split('\n').filter(line => line.trim() !== "").map(row => {
-        return row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+        // This regex ensures "$10,500.00" stays as one value
+        const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+        return matches ? matches.map(m => m.replace(/^"|"$/g, "")) : [];
       });
       
       const container = document.getElementById('driver-stats-container');
       const dataRows = rows.slice(1);
 
       let drivers = dataRows.map(row => {
-        // Skip empty or malformed rows
-        if (!row[0] || row.length < 15) return null;
+        // Skip rows that don't have enough columns
+        if (row.length < 16) return null;
 
-        const mEmpty = cleanNum(row[4]);  
-        const mLoaded = cleanNum(row[5]); 
+        const mEmpty = cleanNum(row[4]);  // Column E
+        const mLoaded = cleanNum(row[5]); // Column F
         const totalMiles = mEmpty + mLoaded;
         const dhCalc = totalMiles > 0 ? ((mEmpty / totalMiles) * 100).toFixed(2) + '%' : '0.00%';
 
         return {
-          id: row[0].replace(/"/g, '').trim(),
-          totalMiles: totalMiles.toLocaleString(),
+          id: row[0].trim(),           // Column A
+          totalMiles: totalMiles.toLocaleString(), 
           dh: dhCalc,
-          rev: fmtUSD(row[12]), 
-          adrValue: cleanNum(row[15]), 
-          adrFormatted: fmtUSD(row[15]) 
+          rev: fmtUSD(row[12]),        // Column M
+          adrValue: cleanNum(row[15]), // Column P (for sorting)
+          adrFormatted: fmtUSD(row[15]) // Column P (display)
         };
-      }).filter(d => d !== null);
+      }).filter(d => d !== null && d.id !== "");
 
-      // Sort by ADR
+      // Sort by ADR (Highest to Lowest)
       drivers.sort((a, b) => b.adrValue - a.adrValue);
 
       container.innerHTML = '';
-      if (drivers.length === 0) {
-        container.innerHTML = '<div class="loading">No valid driver data found in sheet.</div>';
-        return;
-      }
-
       drivers.slice(0, 7).forEach((driver, index) => {
         const isFirst = index === 0;
         const card = document.createElement('div');
@@ -103,7 +99,7 @@
   }
 
   updateLeaderboard();
-  setInterval(updateLeaderboard, 300000);
+  setInterval(updateLeaderboard, 300000); // Update every 5 minutes
 </script>
 </body>
 </html>
