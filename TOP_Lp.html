@@ -29,15 +29,15 @@
   </div>
 
 <script>
-  // Aggressive cleaner: removes everything except numbers and decimals
+  // Strips symbols and forces a clean number for math calculations
   const toNum = (val) => {
     if (!val) return 0;
-    // This regex removes ANY non-numeric character including commas, $, and spaces
-    const clean = String(val).replace(/[^0-9.]/g, "");
+    const clean = String(val).replace(/[^0-9.]/g, ""); // Strips $, quotes, commas, and spaces
     const n = parseFloat(clean);
     return isNaN(n) ? 0 : n;
   };
   
+  // Formats numbers into clean Currency strings with commas and $ sign
   const toUSD = (val) => {
     return '$' + toNum(val).toLocaleString(undefined, {
       minimumFractionDigits: 2, 
@@ -52,9 +52,10 @@
       const response = await fetch(CSV_URL);
       const csvText = await response.text();
       
+      // Smart Split: Only splits at commas that ARE NOT inside quotes
       const rows = csvText.split('\n').filter(line => line.trim() !== "").map(row => {
-        // Simple split since you removed commas in the spreadsheet
-        return row.split(',');
+        const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+        return matches ? matches.map(m => m.replace(/^"|"$/g, "")) : [];
       });
       
       const container = document.getElementById('driver-stats-container');
@@ -63,23 +64,24 @@
       let drivers = dataRows.map(row => {
         if (row.length < 16) return null;
 
-        // Force both values to clean numbers before adding
-        const empty = toNum(row[4]);  // Col E
-        const loaded = toNum(row[5]); // Col F
+        const empty = toNum(row[4]);  // Column E: Empty Miles
+        const loaded = toNum(row[5]); // Column F: Loaded Miles
         const totalMiles = empty + loaded;
         
+        // DH% Calculation (Empty Miles / Total Miles)
         const dh = totalMiles > 0 ? ((empty / totalMiles) * 100).toFixed(2) + '%' : '0.00%';
 
         return {
-          id: row[0].trim(),
-          miles: totalMiles.toLocaleString(), // Formats with commas for display
+          id: row[0].trim(),           // Column A: Driver ID
+          miles: totalMiles.toLocaleString(), 
           deadhead: dh,
-          revenue: toUSD(row[12]),      // Col M
-          adrVal: toNum(row[15]),       // Col P
-          adrDisp: toUSD(row[15])       // Col P
+          revenue: toUSD(row[12]),      // Column M: Total Revenue
+          adrVal: toNum(row[15]),       // Column P: ADR (for sorting)
+          adrDisp: toUSD(row[15])       // Column P: ADR (for display)
         };
-      }).filter(d => d && d.id !== "");
+      }).filter(d => d && d.id !== "" && d.id !== "Rank Driver Id");
 
+      // Sort by ADR (Highest to Lowest)
       drivers.sort((a, b) => b.adrVal - a.adrVal);
 
       container.innerHTML = '';
@@ -88,22 +90,10 @@
         const card = document.createElement('div');
         card.className = `driver-card ${isFirst ? 'top-spot' : ''}`;
         card.innerHTML = `
-          <div class="stat-group">
-            <span class="label">#${index + 1} DRIVER ID</span>
-            <span class="val highlight">${driver.id}</span>
-          </div>
-          <div class="stat-group">
-            <span class="label">TOTAL MILES | DH%</span>
-            <span class="val">${driver.miles} | ${driver.deadhead}</span>
-          </div>
-          <div class="stat-group">
-            <span class="label">TOTAL REVENUE</span>
-            <span class="val">${driver.revenue}</span>
-          </div>
-          <div class="stat-group">
-            <span class="label">ADR</span>
-            <span class="val highlight adr-color">${driver.adrDisp}</span>
-          </div>
+          <div class="stat-group"><span class="label">#${index + 1} DRIVER ID</span><span class="val highlight">${driver.id}</span></div>
+          <div class="stat-group"><span class="label">TOTAL MILES | DH%</span><span class="val">${driver.miles} | ${driver.deadhead}</span></div>
+          <div class="stat-group"><span class="label">TOTAL REVENUE</span><span class="val">${driver.revenue}</span></div>
+          <div class="stat-group"><span class="label">ADR</span><span class="val highlight adr-color">${driver.adrDisp}</span></div>
         `;
         container.appendChild(card);
       });
@@ -113,7 +103,7 @@
   }
 
   updateLeaderboard();
-  setInterval(updateLeaderboard, 300000);
+  setInterval(updateLeaderboard, 300000); // Auto-refresh every 5 mins
 </script>
 </body>
 </html>
