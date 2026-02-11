@@ -29,7 +29,7 @@
       border-radius: 6px;
       padding: 10px 15px;
       display: grid;
-      grid-template-columns: 1.5fr 1fr 1fr 1fr; 
+      grid-template-columns: 1.2fr 1fr 1.2fr 1fr; 
       gap: 15px;
       align-items: center;
       font-size: 0.85rem;
@@ -71,40 +71,47 @@
 <body>
 
   <div id="driver-stats-container" class="dashboard-wrapper">
-    <div class="loading">Loading Top 5 Performers...</div>
+    <div class="loading">Loading Top Performers...</div>
   </div>
 
   <script>
+    // Helper to format currency
+    const fmtUSD = (val) => {
+      const num = parseFloat(String(val).replace(/[^0-9.-]+/g, "")) || 0;
+      return '$' + num.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    };
+
     async function updateLeaderboard() {
-      // NEW CSV URL
       const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSXwF-92T09SgCmFnFLk6NjAWwK52BxFpyivdtrFtFWv-c4DdrF1jgpgZg7jWsyASCqVP7TxyDKVuH4/pub?gid=1773248352&single=true&output=csv';
 
       try {
         const response = await fetch(CSV_URL);
         const csvText = await response.text();
-        
-        // Simple CSV parser: split by line, then by comma
         const rows = csvText.split('\n').map(row => row.split(','));
         const container = document.getElementById('driver-stats-container');
         
-        // Skip the header row (A1:P1)
         const dataRows = rows.slice(1);
 
-        // Map data based on the column indices from your sheet
-        let drivers = dataRows.map(row => ({
-          id: row[0],        // Column A
-          milesE: row[4],    // Column E
-          milesL: row[5],    // Column F
-          dh: row[8],        // Column I
-          rev: row[12],      // Column M
-          adrValue: parseFloat(row[15]?.replace(/[^0-9.-]+/g, "")) || 0, // Column P
-          adrRaw: row[15]    // Column P
-        })).filter(d => d.id); // Remove empty rows
+        let drivers = dataRows.map(row => {
+          const mEmpty = parseFloat(row[4]) || 0;
+          const mLoaded = parseFloat(row[5]) || 0;
+          const totalMiles = mEmpty + mLoaded;
+          
+          // Calculate DH% (Deadhead) as empty miles / total miles
+          const dhPercent = totalMiles > 0 ? ((mEmpty / totalMiles) * 100).toFixed(2) + '%' : '0%';
 
-        // Sort by Highest ADR
+          return {
+            id: row[0],
+            totalMiles: totalMiles.toLocaleString(),
+            dh: dhPercent,
+            rev: fmtUSD(row[12]),
+            adrValue: parseFloat(row[15]?.replace(/[^0-9.-]+/g, "")) || 0,
+            adrFormatted: fmtUSD(row[15])
+          };
+        }).filter(d => d.id);
+
         drivers.sort((a, b) => b.adrValue - a.adrValue);
 
-        // Render Top 7
         container.innerHTML = '';
         drivers.slice(0, 7).forEach((driver, index) => {
           const isFirst = index === 0;
@@ -117,16 +124,16 @@
               <span class="val highlight">${driver.id}</span>
             </div>
             <div class="stat-group">
-              <span class="label">MILES (E/L)</span>
-              <span class="val">${driver.milesE} / ${driver.milesL}</span>
+              <span class="label">TOTAL MILES | DH%</span>
+              <span class="val">${driver.totalMiles} | ${driver.dh}</span>
             </div>
             <div class="stat-group">
-              <span class="label">DH% / REVENUE</span>
-              <span class="val">${driver.dh} | ${driver.rev}</span>
+              <span class="label">TOTAL REVENUE</span>
+              <span class="val">${driver.rev}</span>
             </div>
             <div class="stat-group">
               <span class="label">ADR</span>
-              <span class="val highlight adr-color">${driver.adrRaw}</span>
+              <span class="val highlight adr-color">${driver.adrFormatted}</span>
             </div>
           `;
           container.appendChild(card);
