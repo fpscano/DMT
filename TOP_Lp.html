@@ -29,7 +29,7 @@
   </div>
 
 <script>
-  // This helper removes "$", quotes, and commas so math works on the FULL number
+  // Helper to remove quotes, dollar signs, and commas before doing math
   const cleanNum = (str) => {
     if (!str) return 0;
     let n = parseFloat(String(str).replace(/[$,"]/g, ""));
@@ -47,7 +47,7 @@
       const response = await fetch(CSV_URL);
       const csvText = await response.text();
       
-      // FIX: Regex that ignores commas inside quotes (like "1,200")
+      // FIX: Improved Parser that ignores commas inside quotes
       const rows = csvText.split('\n').filter(line => line.trim() !== "").map(row => {
         const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
         return matches ? matches.map(m => m.replace(/^"|"$/g, "")) : [];
@@ -68,7 +68,7 @@
 
         return {
           id: row[0].trim(),
-          totalMiles: totalMilesNum.toLocaleString(), // Adds commas back for display ONLY
+          totalMiles: totalMilesNum.toLocaleString(), // Properly adds commas for display
           dh: dhCalc,
           rev: fmtUSD(row[12]), 
           adrValue: cleanNum(row[15]), 
@@ -76,6 +76,7 @@
         };
       }).filter(d => d !== null && d.id !== "");
 
+      // Sort by ADR (Highest to Lowest)
       drivers.sort((a, b) => b.adrValue - a.adrValue);
 
       container.innerHTML = '';
@@ -97,7 +98,7 @@
   }
 
   updateLeaderboard();
-  setInterval(updateLeaderboard, 300000);
+  setInterval(updateLeaderboard, 300000); // 5-minute refresh
 </script>
 </body>
 </html>
